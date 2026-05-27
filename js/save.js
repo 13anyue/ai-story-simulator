@@ -1,16 +1,21 @@
-// 存档系统
 const SaveManager = {
     saveGame(slotName) {
         const game = AppState.gameInstance;
         if (!game) return;
         const saves = this.getAllSaves();
-        saves[slotName || `auto_${Date.now()}`] = JSON.parse(JSON.stringify(game));
+        const saveKey = slotName || `auto_${Date.now()}`;
+        saves[saveKey] = {
+            timestamp: Date.now(),
+            data: JSON.parse(JSON.stringify(game))
+        };
         localStorage.setItem('gameSaves', JSON.stringify(saves));
+        UI.showToast(`存档已保存至：${saveKey}`);
     },
     loadGame(slotName) {
         const saves = this.getAllSaves();
-        if (saves[slotName]) {
-            AppState.gameInstance = saves[slotName];
+        const save = saves[slotName];
+        if (save) {
+            AppState.gameInstance = JSON.parse(JSON.stringify(save.data));
             return true;
         }
         return false;
