@@ -1,4 +1,3 @@
-// 默认数据与预设
 const DEFAULT_DATA = {
     api: {
         endpoint: '',
@@ -16,7 +15,7 @@ const DEFAULT_DATA = {
             name: '古风宫廷',
             content: `你是一个专业的文字游戏主持人，请根据以下设定进行游戏：
 世界观：架空古代宫廷，玩家是初入宫廷的秀女。环境暗流涌动，充满权谋与情感纠葛。
-规则：使用第二人称“你”叙述，对话使用粗体，内心活动使用斜体。重要物品和属性用【】标注。
+规则：使用第二人称“你”叙述，对话使用粗体【如：**你好**】，内心活动使用斜体【如：*这该怎么办*】。重要物品和属性用【】标注。
 每次回复给出三段式剧情描述，并在结尾提供3个明确的行动选项。`
         }
     ],
@@ -28,7 +27,6 @@ const DEFAULT_DATA = {
         accent: '#ff6b9d',
         radius: 12
     },
-    gameInstance: null,
     festivalList: ['春节,30', '中秋,90'],
     writingStyle: 'elegant',
     memoryMode: 'recent',
@@ -36,7 +34,6 @@ const DEFAULT_DATA = {
     worldBook: ''
 };
 
-// 游戏实例模板
 function createNewGameInstance(worldName, rules) {
     return {
         worldName: worldName || '新世界',
@@ -57,7 +54,7 @@ function createNewGameInstance(worldName, rules) {
         day: 1,
         activeFestival: null,
         storyHistory: [],
-        npcMeetCount: {}, // 记录NPC出场次数
+        npcMeetCount: {},
         lifeLog: [],
         forumPosts: [],
         forumMessages: [],
@@ -67,7 +64,6 @@ function createNewGameInstance(worldName, rules) {
     };
 }
 
-// 示例NPC
 const SAMPLE_NPCS = [
     {
         id: 'npc1',
