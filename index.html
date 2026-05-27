@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI文字游戏模拟器 - 万象物语</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="loading-overlay"><div class="loading-spinner"></div><p>加载中...</p></div>
+    <div id="toast-container"></div>
+    <div id="modal-overlay" class="modal-overlay hidden"><div id="modal-content" class="modal-content"></div></div>
+
+    <!-- 页面：首页大厅 -->
+    <div id="page-home" class="page active">
+        <header class="home-header">
+            <div class="header-left">
+                <i class="fas fa-gem logo-icon"></i>
+                <h1 class="logo-text">万象物语</h1>
+            </div>
+            <div class="header-right">
+                <button class="icon-btn" id="btn-notification"><i class="fas fa-bell"></i><span class="badge hidden" id="badge-notification">0</span></button>
+                <button class="avatar-btn" id="btn-avatar"><div class="avatar-circle" id="avatar-display">?</div></button>
+            </div>
+        </header>
+        <main class="home-main">
+            <section class="welcome-section">
+                <h2 class="welcome-title">欢迎回来，<span id="welcome-name">旅行者</span></h2>
+                <p class="welcome-subtitle">选择一个世界，开始你的冒险</p>
+            </section>
+            <section class="world-cards-section">
+                <div class="section-header"><h3>我的世界</h3><button class="btn-sm btn-outline" id="btn-create-world"><i class="fas fa-plus"></i> 创建新世界</button></div>
+                <div class="world-cards-container" id="world-cards-container"></div>
+                <div class="empty-state hidden" id="empty-worlds"><i class="fas fa-globe empty-icon"></i><p>还没有任何世界</p><p class="empty-hint">点击上方按钮创建或导入游戏世界</p></div>
+            </section>
+            <section class="quick-actions">
+                <button class="quick-action-btn" id="btn-quick-api"><i class="fas fa-cog"></i><span>API配置</span></button>
+                <button class="quick-action-btn" id="btn-quick-preset"><i class="fas fa-clipboard-list"></i><span>提示词预设</span></button>
+                <button class="quick-action-btn" id="btn-quick-theme"><i class="fas fa-palette"></i><span>主题美化</span></button>
+                <button class="quick-action-btn" id="btn-quick-import"><i class="fas fa-file-import"></i><span>导入游戏</span></button>
+            </section>
+        </main>
+    </div>
+
+    <!-- API配置页 -->
+    <div id="page-api-config" class="page">
+        <header class="sub-header"><button class="back-btn" data-target="page-home"><i class="fas fa-arrow-left"></i> 返回</button><h2>API 配置</h2><span></span></header>
+        <main class="sub-main">
+            <div class="config-card">
+                <div class="form-group"><label>API 端点地址</label><input type="url" id="api-endpoint" placeholder="https://api.example.com/v1/chat/completions" class="form-input"></div>
+                <div class="form-group"><label>API 密钥</label><div class="input-with-icon"><input type="password" id="api-key" placeholder="sk-..." class="form-input"><button class="toggle-visibility" data-target="api-key"><i class="fas fa-eye"></i></button></div></div>
+                <div class="form-group"><label>模型自定义名称</label><input type="text" id="api-model" placeholder="gpt-4 / claude-3-opus" class="form-input"></div>
+                <div class="form-group"><label>温度</label><input type="range" id="api-temperature" min="0" max="2" step="0.1" value="0.8" class="range-input"><span class="range-value" id="temperature-value">0.8</span></div>
+                <div class="form-group"><label>最大Token</label><input type="number" id="api-max-tokens" value="2048" min="256" max="32768" class="form-input"></div>
+                <div class="btn-row"><button class="btn btn-primary" id="btn-test-api"><i class="fas fa-plug"></i> 测试连通性</button><button class="btn btn-success" id="btn-save-api"><i class="fas fa-save"></i> 保存配置</button></div>
+                <div class="test-result hidden" id="api-test-result"></div>
+            </div>
+            <div class="config-card"><h3>当前配置状态</h3>
+                <div class="status-row"><span>端点：</span><span class="status-value" id="status-endpoint">未配置</span></div>
+                <div class="status-row"><span>模型：</span><span class="status-value" id="status-model">未配置</span></div>
+                <div class="status-row"><span>连通：</span><span class="status-value" id="status-connection">未测试</span></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 个人中心 -->
+    <div id="page-profile" class="page">
+        <header class="sub-header"><button class="back-btn" data-target="page-home"><i class="fas fa-arrow-left"></i> 返回</button><h2>个人中心</h2><span></span></header>
+        <main class="sub-main">
+            <div class="config-card"><div class="section-header"><h3>面具角色</h3><button class="btn-sm btn-outline" id="btn-add-persona"><i class="fas fa-plus"></i> 新建</button></div><div class="persona-list" id="persona-list"></div><div class="empty-state small hidden" id="empty-personas"><p>还没有面具角色</p></div></div>
+            <div class="config-card"><h3>世界绑定</h3><div class="form-group"><label>选择默认世界</label><select id="select-default-world" class="form-input"></select></div></div>
+            <div class="config-card"><button class="btn btn-outline full-width" id="btn-goto-preset"><i class="fas fa-list-ul"></i> 提示词预设管理</button><button class="btn btn-outline full-width" id="btn-goto-theme"><i class="fas fa-paint-brush"></i> 主题美化DIY</button><button class="btn btn-outline full-width" id="btn-goto-api"><i class="fas fa-sliders-h"></i> API设置</button></div>
+        </main>
+    </div>
+
+    <!-- 提示词预设页 -->
+    <div id="page-presets" class="page">
+        <header class="sub-header"><button class="back-btn" data-target="page-profile"><i class="fas fa-arrow-left"></i> 返回</button><h2>提示词预设</h2><button class="btn-sm btn-outline" id="btn-add-preset"><i class="fas fa-plus"></i> 新建</button></header>
+        <main class="sub-main"><div class="preset-list" id="preset-list"></div></main>
+    </div>
+
+    <!-- 主题美化页 -->
+    <div id="page-theme" class="page">
+        <header class="sub-header"><button class="back-btn" data-target="page-profile"><i class="fas fa-arrow-left"></i> 返回</button><h2>主题美化DIY</h2><span></span></header>
+        <main class="sub-main">
+            <div class="config-card"><h3>配色方案</h3><div class="theme-preset-grid" id="theme-preset-grid">
+                <div class="theme-preset active" data-theme="default" style="background:linear-gradient(135deg,#1a1a2e,#16213e)"></div>
+                <div class="theme-preset" data-theme="warm" style="background:linear-gradient(135deg,#3e1a1a,#4a2c17)"></div>
+                <div class="theme-preset" data-theme="forest" style="background:linear-gradient(135deg,#1a3e1a,#1a2e1a)"></div>
+                <div class="theme-preset" data-theme="ocean" style="background:linear-gradient(135deg,#1a2a3e,#0f1f3d)"></div>
+                <div class="theme-preset" data-theme="royal" style="background:linear-gradient(135deg,#2e1a3e,#1a1a3e)"></div>
+                <div class="theme-preset" data-theme="sunset" style="background:linear-gradient(135deg,#3e2a1a,#4a1a2a)"></div>
+            </div></div>
+            <div class="config-card"><h3>自定义颜色</h3>
+                <div class="form-group"><label>主色调</label><input type="color" id="custom-primary-color" value="#6c5ce7" class="color-input"></div>
+                <div class="form-group"><label>背景色</label><input type="color" id="custom-bg-color" value="#1a1a2e" class="color-input"></div>
+                <div class="form-group"><label>卡片背景</label><input type="color" id="custom-card-color" value="#1e1e3a" class="color-input"></div>
+                <div class="form-group"><label>文字颜色</label><input type="color" id="custom-text-color" value="#e0dce8" class="color-input"></div>
+                <div class="form-group"><label>强调色</label><input type="color" id="custom-accent-color" value="#ff6b9d" class="color-input"></div>
+                <div class="form-group"><label>圆角大小</label><input type="range" id="custom-radius" min="4" max="24" value="12" class="range-input"><span class="range-value" id="radius-value">12px</span></div>
+                <button class="btn btn-primary" id="btn-apply-custom-theme">应用自定义主题</button><button class="btn btn-outline" id="btn-reset-theme">恢复默认</button>
+            </div>
+        </main>
+    </div>
+
+    <!-- 创建游戏页 -->
+    <div id="page-create-game" class="page">
+        <header class="sub-header"><button class="back-btn" data-target="page-home"><i class="fas fa-arrow-left"></i> 返回</button><h2>创建游戏世界</h2><span></span></header>
+        <main class="sub-main">
+            <div class="config-card"><h3>手写游戏规则</h3>
+                <div class="form-group"><label>世界名称</label><input type="text" id="game-world-name" placeholder="例如：大燕王朝" class="form-input"></div>
+                <div class="form-group"><label>游戏背景与规则</label><textarea id="game-rules-input" rows="8" class="form-textarea" placeholder="描述世界观、规则、角色设定..."></textarea></div>
+                <div class="form-group"><label>提示词预设</label><select id="select-preset-for-game" class="form-input"><option value="default">默认预设 - 古风宫廷</option></select></div>
+                <button class="btn btn-primary full-width" id="btn-generate-game"><i class="fas fa-magic"></i> 交给AI生成游戏世界</button>
+            </div>
+            <div class="config-card"><h3>导入游戏配置</h3><input type="file" id="import-game-file" accept=".json" class="form-input"><button class="btn btn-outline full-width" id="btn-import-game"><i class="fas fa-upload"></i> 导入游戏</button></div>
+            <div class="generation-result hidden" id="generation-result"></div>
+        </main>
+    </div>
+
+    <!-- 游戏内部界面 -->
+    <div id="page-game" class="page">
+        <header class="game-topbar">
+            <div class="game-topbar-left">
+                <span class="game-world-badge" id="game-world-badge">世界名</span>
+                <span class="game-weather" id="game-weather"><i class="fas fa-sun"></i> 晴</span>
+                <span class="game-time" id="game-time">辰时·春</span>
+                <span class="game-date" id="game-date">第1天</span>
+            </div>
+            <div class="game-topbar-right">
+                <span class="game-festival hidden" id="game-festival"><i class="fas fa-star"></i> 节日</span>
+                <button class="icon-btn-sm" id="btn-game-menu"><i class="fas fa-bars"></i></button>
+            </div>
+        </header>
+        <main class="game-main">
+            <div class="game-panel active" id="panel-story">
+                <div class="story-container"><div class="story-content" id="story-content"></div></div>
+                <div class="story-options" id="story-options"></div>
+            </div>
+            <div class="game-panel" id="panel-profile">
+                <div class="panel-scroll">
+                    <div class="player-card"><div class="player-avatar-large" id="player-avatar-large">?</div><div class="player-info-detail"><h3 id="player-name-display">主角</h3><p id="player-title-display">身份</p></div><div class="player-stats" id="player-stats"></div></div>
+                    <div class="inventory-section"><div class="section-header"><h4>背包</h4><span class="item-count" id="item-count">0件</span></div><div class="inventory-grid" id="inventory-grid"></div></div>
+                    <div class="inventory-section"><div class="section-header"><h4><i class="fas fa-lock"></i> 私密物品</h4></div><div class="inventory-grid" id="private-items-grid"></div></div>
+                </div>
+            </div>
+            <div class="game-panel" id="panel-relations">
+                <div class="panel-scroll">
+                    <div class="section-header sticky"><h4>NPC关系表</h4><input type="text" id="npc-search" placeholder="搜索..." class="search-input-sm"></div>
+                    <div class="npc-list" id="npc-list"></div>
+                    <div class="life-log-section"><div class="section-header"><h4>生活日志</h4></div><div class="life-log-list" id="life-log-list"></div></div>
+                </div>
+            </div>
+            <div class="game-panel" id="panel-map">
+                <div class="map-controls">
+                    <select id="select-map-world" class="form-input-sm"><option value="default">默认世界</option></select>
+                    <button class="btn-sm btn-outline" id="btn-upload-map-bg"><i class="fas fa-image"></i> 上传背景</button>
+                    <button class="btn-sm btn-outline" id="btn-ai-generate-locations"><i class="fas fa-robot"></i> AI生成地点</button>
+                </div>
+                <div class="map-container" id="map-container">
+                    <img id="map-background" src="" alt="地图背景" class="map-bg hidden">
+                    <div class="map-placeholder" id="map-placeholder"><i class="fas fa-map-marked-alt"></i><span>点击上传地图背景或点击任意位置创建地点</span></div>
+                    <div class="map-markers" id="map-markers"></div>
+                </div>
+                <div class="location-list" id="location-list"></div>
+            </div>
+            <div class="game-panel" id="panel-forum">
+                <div class="forum-tabs">
+                    <button class="forum-tab active" data-forum-tab="posts">帖子</button>
+                    <button class="forum-tab" data-forum-tab="messages">私信</button>
+                    <button class="forum-tab" data-forum-tab="notifications">通知</button>
+                </div>
+                <div class="forum-content active" id="forum-posts"><button class="btn btn-primary btn-sm" id="btn-new-post"><i class="fas fa-pen"></i> 发帖</button><div class="post-list" id="post-list"></div></div>
+                <div class="forum-content" id="forum-messages"><div class="message-thread-list" id="message-thread-list"></div></div>
+                <div class="forum-content" id="forum-notifications"><div class="notification-list" id="forum-notification-list"></div></div>
+            </div>
+            <div class="game-panel" id="panel-settings">
+                <div class="panel-scroll">
+                    <div class="config-card"><h4><i class="fas fa-brain"></i> 记忆系统</h4><select id="memory-mode" class="form-input"><option value="recent">最近对话</option></select><input type="number" id="memory-depth" value="20" min="5" class="form-input"></div>
+                    <div class="config-card"><h4><i class="fas fa-book"></i> 世界书</h4><textarea id="world-book" rows="5" class="form-textarea"></textarea><button class="btn btn-sm btn-outline" id="btn-save-world-book">保存世界书</button></div>
+                    <div class="config-card"><h4>文风设置</h4><select id="writing-style" class="form-input"><option value="elegant">古风雅致</option><option value="vernacular">白话通俗</option></select></div>
+                    <div class="config-card"><h4>节日管理</h4><div class="tag-manager" id="festival-tags"></div><div class="btn-row-sm"><input type="text" id="new-festival-name" placeholder="名称" class="form-input-sm"><input type="number" id="new-festival-day" placeholder="间隔天数" min="1" value="30" class="form-input-sm"><button class="btn-sm btn-outline" id="btn-add-festival">+添加</button></div></div>
+                    <div class="config-card"><h4>管理</h4><button class="btn btn-warning full-width" id="btn-reset-game"><i class="fas fa-redo"></i> 重开游戏</button><button class="btn btn-danger full-width" id="btn-factory-reset"><i class="fas fa-exclamation-triangle"></i> 恢复出厂设置</button></div>
+                    <div class="config-card"><h4>存档</h4><button class="btn btn-primary full-width" id="btn-save-game"><i class="fas fa-save"></i> 保存进度</button><div class="save-slots" id="save-slots"></div></div>
+                </div>
+            </div>
+        </main>
+        <nav class="bottom-nav">
+            <button class="nav-btn active" data-panel="panel-story"><i class="fas fa-book-open"></i><span>剧情</span></button>
+            <button class="nav-btn" data-panel="panel-profile"><i class="fas fa-user"></i><span>个人</span></button>
+            <button class="nav-btn" data-panel="panel-relations"><i class="fas fa-users"></i><span>关系</span></button>
+            <button class="nav-btn" data-panel="panel-map"><i class="fas fa-map"></i><span>地图</span></button>
+            <button class="nav-btn" data-panel="panel-forum"><i class="fas fa-comments"></i><span>论坛</span></button>
+            <button class="nav-btn" data-panel="panel-settings"><i class="fas fa-cog"></i><span>设置</span></button>
+        </nav>
+    </div>
+
+    <!-- 隐藏模板：NPC详情弹窗 -->
+    <div id="npc-detail-modal-content" class="hidden"></div>
+    <!-- 隐藏模板：NPC手机模拟 -->
+    <div id="npc-phone-modal-content" class="hidden"></div>
+
+    <script src="js/data.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/save.js"></script>
+    <script src="js/systems.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/game-core.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
