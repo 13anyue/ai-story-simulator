@@ -1,4 +1,3 @@
-// API 配置与测试模块
 const APIManager = {
     getConfig() {
         const saved = localStorage.getItem('apiConfig');
@@ -30,11 +29,11 @@ const APIManager = {
             return { success: false, message: `网络错误: ${e.message}` };
         }
     },
-    async generateText(prompt, systemPrompt, config) {
+    async generateText(messages, config, systemPrompt = null) {
         if (!config.endpoint || !config.key) throw new Error('API未配置');
-        const messages = [];
-        if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
-        messages.push({ role: 'user', content: prompt });
+        const allMessages = [];
+        if (systemPrompt) allMessages.push({ role: 'system', content: systemPrompt });
+        allMessages.push(...messages);
         const res = await fetch(config.endpoint, {
             method: 'POST',
             headers: {
@@ -43,7 +42,7 @@ const APIManager = {
             },
             body: JSON.stringify({
                 model: config.model || 'gpt-3.5-turbo',
-                messages,
+                messages: allMessages,
                 temperature: config.temperature || 0.8,
                 max_tokens: config.maxTokens || 2048
             })
