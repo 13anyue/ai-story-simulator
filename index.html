@@ -12,13 +12,10 @@
     <div id="toast-container"></div>
     <div id="modal-overlay" class="modal-overlay hidden"><div id="modal-content" class="modal-content"></div></div>
 
-    <!-- 页面：首页大厅 -->
+    <!-- 首页大厅 -->
     <div id="page-home" class="page active">
         <header class="home-header">
-            <div class="header-left">
-                <i class="fas fa-gem logo-icon"></i>
-                <h1 class="logo-text">万象物语</h1>
-            </div>
+            <div class="header-left"><i class="fas fa-gem logo-icon"></i><h1 class="logo-text">万象物语</h1></div>
             <div class="header-right">
                 <button class="icon-btn" id="btn-notification"><i class="fas fa-bell"></i><span class="badge hidden" id="badge-notification">0</span></button>
                 <button class="avatar-btn" id="btn-avatar"><div class="avatar-circle" id="avatar-display">?</div></button>
@@ -134,24 +131,44 @@
             </div>
         </header>
         <main class="game-main">
+            <!-- 剧情面板 -->
             <div class="game-panel active" id="panel-story">
                 <div class="story-container"><div class="story-content" id="story-content"></div></div>
                 <div class="story-options" id="story-options"></div>
-            </div>
-            <div class="game-panel" id="panel-profile">
-                <div class="panel-scroll">
-                    <div class="player-card"><div class="player-avatar-large" id="player-avatar-large">?</div><div class="player-info-detail"><h3 id="player-name-display">主角</h3><p id="player-title-display">身份</p></div><div class="player-stats" id="player-stats"></div></div>
-                    <div class="inventory-section"><div class="section-header"><h4>背包</h4><span class="item-count" id="item-count">0件</span></div><div class="inventory-grid" id="inventory-grid"></div></div>
-                    <div class="inventory-section"><div class="section-header"><h4><i class="fas fa-lock"></i> 私密物品</h4></div><div class="inventory-grid" id="private-items-grid"></div></div>
+                <div class="custom-action-row">
+                    <input type="text" id="custom-action-input" placeholder="输入自定义行动..." class="form-input">
+                    <button class="btn btn-sm btn-primary" id="btn-custom-action"><i class="fas fa-paper-plane"></i></button>
                 </div>
             </div>
+            <!-- 个人资料面板 -->
+            <div class="game-panel" id="panel-profile">
+                <div class="panel-scroll">
+                    <div class="player-card">
+                        <div class="player-avatar-large" id="player-avatar-large">?</div>
+                        <div class="player-info-detail"><h3 id="player-name-display">主角</h3><p id="player-title-display">身份</p></div>
+                        <div class="player-stats" id="player-stats"></div>
+                    </div>
+                    <div class="inventory-section">
+                        <div class="section-header"><h4>背包</h4><span class="item-count" id="item-count">0件</span></div>
+                        <div class="inventory-grid" id="inventory-grid"></div>
+                        <div class="empty-state small hidden" id="empty-inventory"><p>背包空空如也</p></div>
+                    </div>
+                    <div class="inventory-section">
+                        <div class="section-header"><h4><i class="fas fa-lock"></i> 私密物品</h4></div>
+                        <div class="inventory-grid" id="private-items-grid"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- 关系表面板 -->
             <div class="game-panel" id="panel-relations">
                 <div class="panel-scroll">
                     <div class="section-header sticky"><h4>NPC关系表</h4><input type="text" id="npc-search" placeholder="搜索..." class="search-input-sm"></div>
                     <div class="npc-list" id="npc-list"></div>
+                    <div class="npc-detail-panel hidden" id="npc-detail-panel"></div>
                     <div class="life-log-section"><div class="section-header"><h4>生活日志</h4></div><div class="life-log-list" id="life-log-list"></div></div>
                 </div>
             </div>
+            <!-- 地图面板 -->
             <div class="game-panel" id="panel-map">
                 <div class="map-controls">
                     <select id="select-map-world" class="form-input-sm"><option value="default">默认世界</option></select>
@@ -165,6 +182,7 @@
                 </div>
                 <div class="location-list" id="location-list"></div>
             </div>
+            <!-- 论坛面板 -->
             <div class="game-panel" id="panel-forum">
                 <div class="forum-tabs">
                     <button class="forum-tab active" data-forum-tab="posts">帖子</button>
@@ -175,10 +193,11 @@
                 <div class="forum-content" id="forum-messages"><div class="message-thread-list" id="message-thread-list"></div></div>
                 <div class="forum-content" id="forum-notifications"><div class="notification-list" id="forum-notification-list"></div></div>
             </div>
+            <!-- 设置面板 -->
             <div class="game-panel" id="panel-settings">
                 <div class="panel-scroll">
-                    <div class="config-card"><h4><i class="fas fa-brain"></i> 记忆系统</h4><select id="memory-mode" class="form-input"><option value="recent">最近对话</option></select><input type="number" id="memory-depth" value="20" min="5" class="form-input"></div>
-                    <div class="config-card"><h4><i class="fas fa-book"></i> 世界书</h4><textarea id="world-book" rows="5" class="form-textarea"></textarea><button class="btn btn-sm btn-outline" id="btn-save-world-book">保存世界书</button></div>
+                    <div class="config-card"><h4><i class="fas fa-brain"></i> 记忆系统</h4><select id="memory-mode" class="form-input"><option value="recent">最近对话</option><option value="summary">摘要记忆</option></select><input type="number" id="memory-depth" value="20" min="5" class="form-input"></div>
+                    <div class="config-card"><h4><i class="fas fa-book"></i> 世界书</h4><textarea id="world-book" rows="5" class="form-textarea" placeholder="世界的永恒设定，将影响所有AI回复..."></textarea><button class="btn btn-sm btn-outline" id="btn-save-world-book">保存世界书</button></div>
                     <div class="config-card"><h4>文风设置</h4><select id="writing-style" class="form-input"><option value="elegant">古风雅致</option><option value="vernacular">白话通俗</option></select></div>
                     <div class="config-card"><h4>节日管理</h4><div class="tag-manager" id="festival-tags"></div><div class="btn-row-sm"><input type="text" id="new-festival-name" placeholder="名称" class="form-input-sm"><input type="number" id="new-festival-day" placeholder="间隔天数" min="1" value="30" class="form-input-sm"><button class="btn-sm btn-outline" id="btn-add-festival">+添加</button></div></div>
                     <div class="config-card"><h4>管理</h4><button class="btn btn-warning full-width" id="btn-reset-game"><i class="fas fa-redo"></i> 重开游戏</button><button class="btn btn-danger full-width" id="btn-factory-reset"><i class="fas fa-exclamation-triangle"></i> 恢复出厂设置</button></div>
@@ -196,9 +215,7 @@
         </nav>
     </div>
 
-    <!-- 隐藏模板：NPC详情弹窗 -->
     <div id="npc-detail-modal-content" class="hidden"></div>
-    <!-- 隐藏模板：NPC手机模拟 -->
     <div id="npc-phone-modal-content" class="hidden"></div>
 
     <script src="js/data.js"></script>
