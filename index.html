@@ -2,60 +2,227 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>AI世界书 · 文游创世引擎</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
+    <!-- 外部依赖：文档解析库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        /* 内联一些必要的重置，避免初始无样式闪烁 */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #e5e5e7; font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif; overflow-x: hidden; }
+        .hidden { display: none !important; }
+        .toast-container { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 10000; pointer-events: none; }
+        .global-loader { position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 448px; background: rgba(255,255,255,0.9); border-bottom: 2px solid #f59e0b; padding: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; z-index: 10001; }
+        .loader-spinner { width: 20px; height: 20px; border: 3px solid #ccc; border-top-color: #f59e0b; border-radius: 50%; animation: spin 0.7s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .app-root { max-width: 448px; margin: 0 auto; min-height: 100vh; background: #fafafa; color: #18181b; border-left: 1px solid #d4d4d8; border-right: 1px solid #d4d4d8; position: relative; }
+        .screen-view { display: none; padding: 16px; }
+        .screen-view.active { display: block; }
+        /* 更多样式在外部 style.css 中定义，但为了首次渲染基础，加入部分核心 */
+        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 448px; background: rgba(255,255,255,0.9); backdrop-filter: blur(18px); border-top: 1px solid #d4d4d8; display: flex; justify-content: space-around; padding: 8px 12px; z-index: 50; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 2px; background: none; border: none; color: #a1a1aa; font-size: 0.7rem; cursor: pointer; }
+        .nav-item.active { color: #18181b; font-weight: 700; }
+        .nav-item i { font-size: 1.1rem; }
+    </style>
 </head>
 <body>
     <div id="toast-container" class="toast-container"></div>
-    <div id="global-loader" class="global-loader" style="display:none;"><div class="loader-spinner"></div><p>AI 思考中...</p></div>
-    <div id="global-bg-layer"></div>
-    
+    <div id="global-loader" class="global-loader" style="display:none;">
+        <div class="loader-spinner"></div>
+        <p>AI 思考中...</p>
+    </div>
+
     <div id="app-root" class="app-root">
-        <!-- 大厅首页 -->
+        <!-- ==================== 大厅首页 ==================== -->
         <div id="screen-lobby" class="screen-view active">
             <div class="lobby-header">
-                <div><h1>AI 世界书 · 文游创世引擎</h1><p>高自由度 · 高度DIY · 沉浸式交互剧场</p></div>
-                <div><button onclick="openUserManager()" class="icon-btn"><i class="fas fa-user-circle"></i></button><button onclick="switchScreen('screen-api-config')" class="icon-btn"><i class="fas fa-key"></i></button></div>
+                <div>
+                    <h1 style="font-size:1.25rem; font-weight:900;">AI 世界书 · 文游创世引擎</h1>
+                    <p style="font-size:0.7rem; color:#a1a1aa;">高自由度 · 高度DIY · 沉浸式交互剧场</p>
+                </div>
+                <div class="lobby-header-actions" style="display:flex; gap:8px;">
+                    <button onclick="openUserManager()" class="icon-btn" title="个人中心" style="background:#f4f4f5; border:1px solid #d4d4d8; border-radius:50%; width:36px; height:36px;"><i class="fas fa-user-circle"></i></button>
+                    <button onclick="switchScreen('screen-api-config')" class="icon-btn" style="background:#f4f4f5; border:1px solid #d4d4d8; border-radius:50%; width:36px; height:36px;"><i class="fas fa-key"></i></button>
+                </div>
             </div>
-            <div id="lobby-resume-banner" class="resume-banner hidden" onclick="resumeLastGame()"><i class="fas fa-play-circle"></i><div><span>继续上次进度</span><span id="resume-world-name">—</span></div></div>
-            <div class="lobby-section"><div class="section-header"><h2><i class="fas fa-globe-asia"></i> 选择剧本世界</h2><span id="world-count-badge">0</span></div><div id="lobby-world-list" class="world-list"></div></div>
-            <div class="lobby-section"><div class="section-header"><h2><i class="fas fa-wand-magic-sparkles"></i> 孕育新世界</h2></div><div class="create-world-buttons"><button onclick="openWorldCreatorModal()" class="btn-secondary"><i class="fas fa-feather-pointed"></i> 手写设定生成</button><button onclick="document.getElementById('world-file-uploader').click()" class="btn-primary"><i class="fas fa-file-import"></i> 导入文件创世</button><input type="file" id="world-file-uploader" class="hidden" accept=".txt,.md,.docx,.doc,.pdf" onchange="handleWorldFileImport(this)"></div></div>
-            <div class="lobby-section"><div class="section-header"><h2><i class="fas fa-palette"></i> 界面主题DIY</h2></div><div id="appearance-panel"><div class="theme-row"><span>背景图</span><label class="file-label"><i class="fas fa-upload"></i> 上传<input type="file" id="global-bg-uploader" class="hidden" accept="image/*" onchange="uploadGlobalBackground(this)"></label></div><div class="theme-row"><span>背景色</span><input type="color" id="diy-color-bg-lobby" onchange="applyDiyThemeFromLobby()" value="#fafafa"></div><div class="theme-row"><span>文字色</span><input type="color" id="diy-color-text-lobby" onchange="applyDiyThemeFromLobby()" value="#18181b"></div><div class="theme-row"><span>夜间模式</span><button onclick="toggleDayNightFromLobby()" class="daynight-toggle"><span class="toggle-knob"><i id="lobby-dn-icon"></i></span></button></div><div class="theme-row"><span>字体缩放</span><input type="range" id="lobby-font-scale" min="0.7" max="1.5" step="0.05" value="1" oninput="setFontScaleFromLobby(this.value)"><span id="lobby-font-scale-value">1.00</span></div></div></div>
-            <div class="lobby-section"><div class="section-header"><h2><i class="fas fa-box-archive"></i> 快速读取历史进度</h2></div><div id="lobby-save-list" class="save-list"></div></div>
+
+            <div id="lobby-resume-banner" class="resume-banner hidden" onclick="resumeLastGame()" style="background:#f4f4f5; border:2px solid #f59e0b; border-radius:12px; padding:12px; margin-bottom:16px; display:flex; align-items:center; gap:12px; cursor:pointer;">
+                <i class="fas fa-play-circle" style="color:#f59e0b; font-size:1.5rem;"></i>
+                <div><span style="font-weight:bold;">继续上次进度</span><br><span id="resume-world-name" style="font-size:0.7rem; color:#a1a1aa;">—</span></div>
+            </div>
+
+            <div class="lobby-section" style="background:#f4f4f5; border-radius:16px; padding:16px; margin-bottom:16px; border:1px solid #d4d4d8;">
+                <div class="section-header" style="display:flex; justify-content:space-between; margin-bottom:12px;">
+                    <h2 style="font-size:0.8rem; font-weight:700;"><i class="fas fa-globe-asia"></i> 选择剧本世界</h2>
+                    <span id="world-count-badge" style="font-size:0.7rem; color:#a1a1aa;">0 个可用</span>
+                </div>
+                <div id="lobby-world-list" class="world-list" style="display:flex; flex-direction:column; gap:12px;"></div>
+            </div>
+
+            <div class="lobby-section" style="background:#f4f4f5; border-radius:16px; padding:16px; margin-bottom:16px; border:1px solid #d4d4d8;">
+                <div class="section-header"><h2 style="font-size:0.8rem; font-weight:700;"><i class="fas fa-wand-magic-sparkles"></i> 孕育新世界</h2></div>
+                <div class="create-world-buttons" style="display:flex; gap:12px;">
+                    <button onclick="openWorldCreatorModal()" class="btn-secondary" style="flex:1; background:#e4e4e7; border:none; border-radius:40px; padding:8px; font-size:0.75rem; font-weight:600; cursor:pointer;"><i class="fas fa-feather-pointed"></i> 手写设定生成</button>
+                    <button onclick="document.getElementById('world-file-uploader').click()" class="btn-primary" style="flex:1; background:#18181b; color:#fafafa; border:none; border-radius:40px; padding:8px; font-size:0.75rem; font-weight:600; cursor:pointer;"><i class="fas fa-file-import"></i> 导入文件创世</button>
+                    <input type="file" id="world-file-uploader" class="hidden" accept=".txt,.md,.docx,.doc,.pdf" onchange="handleWorldFileImport(this)">
+                </div>
+            </div>
+
+            <!-- 界面主题 DIY 折叠面板（简化） -->
+            <div class="lobby-section collapsible" style="background:#f4f4f5; border-radius:16px; padding:16px; margin-bottom:16px; border:1px solid #d4d4d8;">
+                <div class="section-header cursor-pointer" onclick="toggleSection('appearance-panel')" style="display:flex; justify-content:space-between; cursor:pointer;">
+                    <h2 style="font-size:0.8rem; font-weight:700;"><i class="fas fa-palette"></i> 界面主题 DIY</h2>
+                    <i id="appearance-arrow" class="fas fa-chevron-down"></i>
+                </div>
+                <div id="appearance-panel" class="collapsible-content hidden" style="margin-top:12px;">
+                    <!-- 动态填充，将在app.js中初始化 -->
+                </div>
+            </div>
+
+            <div class="lobby-section" style="background:#f4f4f5; border-radius:16px; padding:16px; margin-bottom:16px; border:1px solid #d4d4d8;">
+                <div class="section-header"><h2 style="font-size:0.8rem; font-weight:700;"><i class="fas fa-box-archive"></i> 快速读取历史进度</h2></div>
+                <div id="lobby-save-list" class="save-list" style="max-height:200px; overflow-y:auto;"></div>
+            </div>
         </div>
 
-        <!-- API配置页 -->
+        <!-- ==================== API 配置页 ==================== -->
         <div id="screen-api-config" class="screen-view hidden">
-            <div class="api-header"><button onclick="switchScreen('screen-lobby')" class="back-btn"><i class="fas fa-arrow-left"></i></button><div><h2>大模型 API 配置中心</h2><p>配置后即可激活全AI驱动逻辑</p></div></div>
-            <div class="api-form"><label>API 请求端点</label><input type="text" id="cfg-endpoint" placeholder="https://api.openai.com/v1"><label>API 访问密钥</label><input type="password" id="cfg-key" placeholder="sk-..."><label>自定义大模型名称</label><input type="text" id="cfg-model" placeholder="gpt-4o-mini"><div class="api-actions"><button onclick="fetchAvailableModels()" class="btn-secondary"><i class="fas fa-cloud-arrow-down"></i> 拉取可用列表</button><button onclick="testAPIConnection()" class="btn-primary"><i class="fas fa-vial"></i> 测试连通性</button></div><div id="model-list-box" class="model-list hidden"></div></div>
-            <button onclick="saveAPIConfigAndBack()" class="btn-primary full-width">保存配置并返回大厅</button>
+            <div style="display:flex; align-items:center; gap:12px; border-bottom:1px solid #d4d4d8; padding-bottom:16px; margin-bottom:20px;">
+                <button onclick="switchScreen('screen-lobby')" style="background:none; border:none; font-size:1.2rem; cursor:pointer;"><i class="fas fa-arrow-left"></i></button>
+                <div><h2 style="font-size:1.2rem; font-weight:700;">大模型 API 配置中心</h2><p style="font-size:0.7rem; color:#a1a1aa;">配置后即可激活全AI驱动逻辑</p></div>
+            </div>
+            <div class="api-form" style="display:flex; flex-direction:column; gap:16px;">
+                <label style="font-size:0.7rem; font-weight:700;">API 请求端点</label>
+                <input type="text" id="cfg-endpoint" class="cfg-input" placeholder="https://api.openai.com/v1" style="background:#fafafa; border:1px solid #d4d4d8; border-radius:8px; padding:10px;">
+                <label style="font-size:0.7rem; font-weight:700;">API 访问密钥</label>
+                <input type="password" id="cfg-key" class="cfg-input" placeholder="sk-..." style="background:#fafafa; border:1px solid #d4d4d8; border-radius:8px; padding:10px;">
+                <label style="font-size:0.7rem; font-weight:700;">自定义大模型名称</label>
+                <input type="text" id="cfg-model" class="cfg-input" placeholder="gpt-4o-mini" style="background:#fafafa; border:1px solid #d4d4d8; border-radius:8px; padding:10px;">
+                <div style="display:flex; gap:12px;">
+                    <button onclick="fetchAvailableModels()" class="btn-secondary" style="flex:1; background:#e4e4e7; border:none; border-radius:40px; padding:8px; font-size:0.75rem; cursor:pointer;"><i class="fas fa-cloud-arrow-down"></i> 拉取可用列表</button>
+                    <button onclick="testAPIConnection()" class="btn-primary" style="flex:1; background:#18181b; color:#fafafa; border:none; border-radius:40px; padding:8px; font-size:0.75rem; cursor:pointer;"><i class="fas fa-vial"></i> 测试连通性</button>
+                </div>
+                <div id="model-list-box" class="model-list hidden" style="border:1px solid #d4d4d8; border-radius:12px; padding:12px; max-height:150px; overflow-y:auto;"></div>
+            </div>
+            <button onclick="saveAPIConfigAndBack()" class="btn-primary full-width" style="width:100%; margin-top:20px; background:#18181b; color:#fafafa; border:none; border-radius:40px; padding:12px; font-weight:700;">保存配置并返回大厅</button>
         </div>
 
-        <!-- 游戏主界面 -->
-        <div id="screen-gameplay" class="screen-view hidden">
-            <div class="game-top-bar"><div class="game-info"><h3 id="gp-world-title">—</h3><span id="gp-location-badge">位置: 未知</span><span id="topbar-weather-chip">☀️ 晴好</span><span id="topbar-festival-chip">📅 平日</span><button onclick="toggleRumorPanel()" class="chip-btn"><i class="fas fa-newspaper"></i> 传闻</button><button id="scroll-to-bottom-btn" class="chip-btn"><i class="fas fa-arrow-down"></i> 到底</button></div><div class="game-actions"><button onclick="toggleDayNight()" class="daynight-toggle"><span class="toggle-knob"><i id="dn-icon-game"></i></span></button><button onclick="saveEverything()" class="icon-btn"><i class="fas fa-save"></i></button><button onclick="restartCurrentGame()" class="icon-btn text-red"><i class="fas fa-power-off"></i></button><button onclick="exitWorldToLobby()" class="icon-btn"><i class="fas fa-right-from-bracket"></i></button></div></div>
-            <div id="game-subview-container" class="subview-container">
-                <!-- 剧情视图 -->
-                <div id="subview-story" class="subview-panel hidden"><div class="story-header"><span><i class="fas fa-history"></i> 剧情回合 · <span id="story-round-counter">0</span></span><span>📜 长按文字可编辑/删除/撤回</span></div><div id="rumor-panel" class="rumor-banner hidden"><i class="fas fa-bullhorn"></i><span id="rumor-text">暂无传闻</span></div><div id="story-terminal" class="story-terminal"></div><div class="story-control-panel"><div id="choices-wrapper" class="choices-wrapper"><div id="story-choices-box" class="choices-box collapsed"></div></div><div class="control-buttons"><button onclick="toggleChoicesCollapse()" class="btn-small"><i class="fas fa-list-ul"></i> 选项</button><button onclick="submitAiHelpWrite()" class="btn-small accent"><i class="fas fa-robot"></i> AI帮写</button></div><div class="input-area"><i class="fas fa-keyboard"></i><input type="text" id="story-custom-input" placeholder="自由行动..."><button onclick="submitCustomAction()" class="btn-primary">执行</button><div><button onclick="toggleStoryMoreMenu()" class="icon-btn"><i class="fas fa-ellipsis-h"></i></button><div id="story-more-menu" class="dropdown-menu hidden"><button onclick="triggerContinueStory()">续写</button><button onclick="triggerRewriteCurrent()">重写</button><button onclick="triggerHistoryRollback()">回溯</button></div></div></div></div></div>
-                <!-- 地图视图 -->
-                <div id="subview-map" class="subview-panel hidden"><div class="map-header"><h2><i class="fas fa-map"></i> 大世界探索</h2><div><select id="map-selector" onchange="switchMap(this.value)"></select><button onclick="createNewMap()" class="btn-small">+ 新建</button></div></div><div class="map-bg-controls"><label class="file-label"><i class="fas fa-upload"></i> 上传图纸<input type="file" id="map-bg-uploader" class="hidden" accept="image/*" onchange="uploadMapBackground(this)"></label><button onclick="clearMapBackground()" class="btn-small">清除底图</button></div><div id="yiciyuan-map-viewport" class="explore-map-container" onclick="handleMapBackgroundClick(event)"><div id="map-empty-hint" class="map-empty-hint"><i class="fas fa-image"></i><span>上传背景图后，点击此处安放地标</span></div></div><div class="location-form"><input type="text" id="new-loc-name" placeholder="地点名称"><input type="text" id="new-loc-desc" placeholder="资源与描述..."><button onclick="manuallyAddLocation()" class="btn-secondary">手动确立</button><button onclick="aiGenerateRandomLocation()" class="btn-primary">✨ AI 智能衍生</button><button onclick="quickMoveAllNpcsToCurrentLocation()" class="btn-outline"><i class="fas fa-users-rays"></i> 汇聚所有NPC</button></div></div>
-                <!-- 个人资料视图 -->
-                <div id="subview-stats" class="subview-panel hidden"><div class="player-card"><div class="player-card-header"></div><div class="player-card-body"><div class="player-avatar" onclick="openPlayerQuickAvatarUpload()"><div id="player-avatar-preview"></div><i class="fas fa-camera"></i><input type="file" id="player-avatar-upload" class="hidden" accept="image/*" onchange="handlePlayerAvatarUpload(this)"></div><div class="player-info"><input type="text" id="player-config-name" onchange="updatePlayerCoreName(this.value)" value="我"><span id="player-identity-title">天选编织者</span><button onclick="openPlayerSettingModal()" class="icon-btn"><i class="fas fa-pen-nib"></i></button></div><div id="player-setting-preview" class="player-setting-preview"><div><span>性格</span><span id="player-personality">—</span></div><div><span>喜好</span><span id="player-likes">—</span></div><div><span>背景</span><span id="player-background">—</span></div><div><span>设定</span><span id="player-charset">—</span></div><div><span>秘密</span><span id="player-secret">—</span></div></div></div></div><div class="cheat-bar"><span><i class="fas fa-wand-sparkles"></i> 金手指</span><label class="switch"><input type="checkbox" id="cheat-toggle" onchange="toggleCheatMode()"><span class="slider"></span></label><span id="cheat-status-text">关闭</span><button onclick="adjustAllPlayerStats(10)">+10</button><button onclick="adjustAllPlayerStats(-10)">-10</button></div><div id="player-stats-grid" class="stats-grid"></div><div class="inventory-section"><div class="section-header"><h3><i class="fas fa-backpack"></i> 背包资产</h3><button onclick="openPlayerBackpackModal()" class="btn-small">详情管理</button></div><div id="player-backpack-preview" class="backpack-preview">空空如也</div></div><div class="relations-section"><div class="section-header"><h3><i class="fas fa-heart"></i> 人际关系</h3><button onclick="openPlayerRelationsModal()" class="btn-small">管理</button></div><div id="player-relations-preview" class="relations-preview">暂无记录</div></div><div class="resume-log-section"><div class="section-header"><h3><i class="fas fa-clock-rotate-left"></i> 个人生活日志</h3><button onclick="addPlayerResumeLog()" class="btn-small"><i class="fas fa-plus"></i>录入</button></div><div id="player-resume-log" class="resume-log"></div></div><div class="deleted-npcs-section"><div class="section-header"><h3><i class="fas fa-trash-alt"></i> 已删除 NPC 管理</h3><button onclick="refreshDeletedNpcPanel()" class="btn-small"><i class="fas fa-sync-alt"></i>刷新</button><button onclick="clearAllDeletedNpcs()" class="btn-small text-red"><i class="fas fa-trash-can"></i>清空</button></div><div id="deleted-npcs-list" class="deleted-npcs-list"></div></div></div>
-                <!-- NPC视图 -->
-                <div id="subview-npc" class="subview-panel hidden"><div class="npc-header"><h2><i class="fas fa-users-viewfinder"></i> 群星阵列</h2><button onclick="openNpcCreationModal()" class="btn-primary"><i class="fas fa-user-plus"></i> 新角色</button></div><div class="npc-generate-buttons"><button onclick="aiGenerateNpcByWorld()" class="btn-secondary"><i class="fas fa-globe"></i> 基于世界观衍生</button><button onclick="aiGenerateNpcByStory()" class="btn-secondary"><i class="fas fa-book-open"></i> 基于剧情提取</button></div><div id="npc-cards-container" class="npc-cards-container"></div><div class="npc-management"><div class="section-header">生态系统管理</div><div class="management-buttons"><button onclick="openFamilyTreeModal()" class="btn-small"><i class="fas fa-sitemap"></i>家族树</button><button onclick="openSituationAnalysisModal()" class="btn-small"><i class="fas fa-chart-pie"></i>局势分析</button><button onclick="openNpcRelationsModal()" class="btn-small"><i class="fas fa-network-wired"></i>关系网</button><button onclick="aiGenerateAllNpcRelations()" class="btn-small"><i class="fas fa-wand-sparkles"></i>AI推演</button><label class="file-label"><i class="fas fa-file-import"></i> 导入角色<input type="file" id="npc-import-file" class="hidden" accept=".json,.csv,.txt,.md,.png,.jpg,.jpeg" onchange="importNpcData(this)"></label></div></div></div>
-                <!-- 世界书视图 -->
-                <div id="subview-worldbook" class="subview-panel hidden"><div class="worldbook-header"><h2><i class="fas fa-scroll"></i> 世界书 · 记忆编织</h2><p>关键词自动注入背景</p></div><div class="worldbook-section"><div class="section-header"><i class="fas fa-globe-asia"></i> 终极世界观</div><textarea id="wb-global-lore" rows="3" placeholder="世界观规则..."></textarea><button onclick="aiPolishWorldLore()" class="btn-secondary"><i class="fas fa-wand-magic-sparkles"></i> AI润色</button></div><div class="worldbook-section"><div class="section-header"><i class="fas fa-brain"></i> AI自动记忆提炼<label class="switch"><input type="checkbox" id="wb-auto-log-toggle" onchange="toggleAutoWorldLog()"><span class="slider"></span></label></div><div id="wb-auto-log-setting" class="hidden"><label>触发关键词</label><input type="text" id="wb-auto-trigger" placeholder="秘密,阴谋"></div></div><div class="worldbook-section"><div class="section-header"><i class="fas fa-scroll"></i> 记忆条目<button onclick="addNewWorldBookEntry()" class="btn-small"><i class="fas fa-plus"></i>新建</button></div><div id="worldbook-entries-list" class="worldbook-entries-list"></div></div><div class="worldbook-section"><div class="section-header"><i class="fas fa-compress-alt"></i> 深度记忆提取<button onclick="runAILoreSummarize()" class="btn-primary">AI归纳</button><button onclick="saveSummaryPrompt()" class="btn-secondary">保存提示词</button></div><input type="text" id="wb-summary-prompt" value="请总结以下事件影响，100字内:"></div></div>
-                <!-- 论坛视图 -->
-                <div id="subview-forum" class="subview-panel hidden"><div class="forum-header"><h3><i class="fas fa-comments"></i> 玩家社区</h3><div><button onclick="forumRefresh()" class="icon-btn"><i class="fas fa-sync-alt"></i></button><button onclick="closeForumModal()" class="icon-btn"><i class="fas fa-times"></i></button></div></div><div class="forum-tabs"><div class="forum-tab active" data-tab="hot"><i class="fas fa-fire"></i> 热门</div><div class="forum-tab" data-tab="latest"><i class="fas fa-clock"></i> 最新</div><div class="forum-tab" data-tab="npc"><i class="fas fa-robot"></i> NPC动态</div></div><div id="forum-posts-container" class="forum-posts-container"></div><div class="forum-input-area"><input type="text" id="forum-post-input" placeholder="分享见闻..."><button onclick="forumPublishPost()" class="btn-primary">发布</button></div></div>
-                <!-- 设置视图 -->
-                <div id="subview-settings" class="subview-panel hidden">...</div>
+        <!-- ==================== 游戏主界面 ==================== -->
+        <div id="screen-gameplay" class="screen-view hidden" style="display:flex; flex-direction:column; height:100vh; padding:0;">
+            <!-- 顶部栏 -->
+            <div class="game-top-bar" style="display:flex; justify-content:space-between; align-items:center; padding:8px 16px; background:rgba(255,255,255,0.82); backdrop-filter:blur(18px); border-bottom:1px solid #d4d4d8; position:sticky; top:0; z-index:30;">
+                <div class="game-info" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:0.7rem;">
+                    <h3 id="gp-world-title" style="font-size:0.85rem; font-weight:700;">—</h3>
+                    <span id="gp-location-badge" style="background:#f4f4f5; border:1px solid #d4d4d8; border-radius:20px; padding:2px 8px;">位置: 未知</span>
+                    <span id="topbar-weather-chip" class="topbar-weather-chip" style="background:#f4f4f5; border-radius:20px; padding:2px 8px;">☀️ 晴好</span>
+                    <span id="topbar-festival-chip" class="topbar-weather-chip" style="background:#f4f4f5; border-radius:20px; padding:2px 8px;">📅 平日</span>
+                    <button onclick="toggleRumorPanel()" class="chip-btn" style="background:#f4f4f5; border:1px solid #d4d4d8; border-radius:20px; padding:2px 8px; cursor:pointer;"><i class="fas fa-newspaper"></i> 传闻</button>
+                    <button id="scroll-to-bottom-btn" class="chip-btn" style="background:#f4f4f5; border:1px solid #d4d4d8; border-radius:20px; padding:2px 8px; cursor:pointer;"><i class="fas fa-arrow-down"></i> 到底</button>
+                </div>
+                <div class="game-actions" style="display:flex; gap:6px;">
+                    <button onclick="toggleDayNight()" class="daynight-toggle" title="切换日夜" style="position:relative; width:44px; height:24px; border-radius:24px; background:#e4e4e7; border:2px solid #d4d4d8; display:flex; align-items:center; padding:2px;"><span class="toggle-knob" style="width:18px; height:18px; border-radius:50%; background:#f59e0b; transition:all 0.4s; transform:translateX(20px);"></span></button>
+                    <button onclick="saveEverything()" class="icon-btn" style="background:#f4f4f5; border:1px solid #d4d4d8; border-radius:50%; width:32px; height:32px;"><i class="fas fa-save"></i></button>
+                    <button onclick="restartCurrentGame()" class="icon-btn text-red" style="background:#f4f4f5; border:1px solid #d4d4d8; border-radius:50%; width:32px; height:32px; color:#ef4444;"><i class="fas fa-power-off"></i></button>
+                    <button onclick="exitWorldToLobby()" class="icon-btn" style="background:#f4f4f5; border:1px solid #d4d4d8; border-radius:50%; width:32px; height:32px;"><i class="fas fa-right-from-bracket"></i></button>
+                </div>
             </div>
-            <div class="bottom-nav" id="bottom-nav-bar"><button onclick="switchSubview('subview-story')" class="nav-item active"><i class="fas fa-book-open"></i><span>故事</span></button><button onclick="switchSubview('subview-map')" class="nav-item"><i class="fas fa-map-location-dot"></i><span>大地图</span></button><button onclick="switchSubview('subview-stats')" class="nav-item"><i class="fas fa-id-card"></i><span>属性日志</span></button><button onclick="switchSubview('subview-npc')" class="nav-item"><i class="fas fa-users-viewfinder"></i><span>NPC</span></button><button onclick="switchSubview('subview-worldbook')" class="nav-item"><i class="fas fa-scroll"></i><span>世界书</span></button><button onclick="switchSubview('subview-forum')" class="nav-item"><i class="fas fa-comments"></i><span>论坛</span></button><button onclick="switchSubview('subview-settings')" class="nav-item"><i class="fas fa-sliders-h"></i><span>设置</span></button></div>
+
+            <!-- 子视图容器 -->
+            <div id="game-subview-container" class="subview-container" style="flex:1; overflow-y:auto; position:relative;">
+                <!-- 剧情视图 -->
+                <div id="subview-story" class="subview-panel hidden" style="display:flex; flex-direction:column; height:100%;">
+                    <div class="story-header" style="display:flex; justify-content:space-between; padding:8px 16px; background:var(--bg-secondary);"><span><i class="fas fa-history"></i> 剧情回合 · <span id="story-round-counter">0</span></span><span>📜 长按文字可编辑/删除/撤回</span></div>
+                    <div id="rumor-panel" class="rumor-banner hidden" style="margin:8px 12px; padding:8px 12px; background:var(--bg-secondary); border-radius:12px; display:flex; align-items:center; gap:8px;"><i class="fas fa-bullhorn"></i><span id="rumor-text">暂无传闻</span></div>
+                    <div id="story-terminal" class="story-terminal" style="flex:1; overflow-y:auto; padding:16px;"></div>
+                    <div class="story-control-panel" style="background:var(--bg-secondary); border-top:1px solid var(--border-color); padding:12px;">
+                        <div id="choices-wrapper" class="choices-wrapper" style="margin-bottom:8px;"><div id="story-choices-box" class="choices-box collapsed" style="background:var(--bg-primary); border:1px solid var(--border-color); border-radius:12px; padding:8px; max-height:200px; overflow-y:auto;"></div></div>
+                        <div class="control-buttons" style="display:flex; gap:8px; margin-bottom:8px;"><button onclick="toggleChoicesCollapse()" class="btn-small"><i class="fas fa-list-ul"></i> 选项</button><button onclick="submitAiHelpWrite()" class="btn-small accent"><i class="fas fa-robot"></i> AI帮写</button></div>
+                        <div class="input-area" style="display:flex; gap:8px; background:var(--bg-primary); border-radius:40px; padding:8px 12px;"><i class="fas fa-keyboard"></i><input type="text" id="story-custom-input" style="flex:1; background:transparent; border:none; outline:none;" placeholder="自由行动..."><button onclick="submitCustomAction()" class="btn-primary">执行</button><div class="relative"><button onclick="toggleStoryMoreMenu()" class="icon-btn"><i class="fas fa-ellipsis-h"></i></button><div id="story-more-menu" class="dropdown-menu hidden" style="position:absolute; bottom:100%; right:0; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:12px; display:none;"><button onclick="triggerContinueStory()">续写</button><button onclick="triggerRewriteCurrent()">重写</button><button onclick="triggerHistoryRollback()">回溯</button></div></div></div>
+                    </div>
+                </div>
+
+                <!-- 地图视图 -->
+                <div id="subview-map" class="subview-panel hidden" style="padding:16px;">
+                    <div class="map-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;"><h2><i class="fas fa-map"></i> 大世界探索</h2><div><select id="map-selector"></select><button onclick="createNewMap()" class="btn-small">+ 新建</button></div></div>
+                    <div class="map-bg-controls" style="margin-bottom:12px;"><label class="file-label"><i class="fas fa-upload"></i> 上传图纸<input type="file" id="map-bg-uploader" class="hidden" accept="image/*" onchange="uploadMapBackground(this)"></label><button onclick="clearMapBackground()" class="btn-small">清除底图</button></div>
+                    <div id="yiciyuan-map-viewport" class="explore-map-container" style="position:relative; width:100%; min-height:320px; border-radius:16px; overflow:hidden; border:2px solid var(--border-color); cursor:crosshair; background-size:cover; background-position:center;" onclick="handleMapBackgroundClick(event)"><div id="map-empty-hint" class="map-empty-hint" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none;"><i class="fas fa-image"></i><span>上传背景图后，点击此处安放地标</span></div></div>
+                    <div class="location-form" style="margin-top:16px; display:grid; grid-template-columns:1fr 1fr; gap:8px;"><input type="text" id="new-loc-name" placeholder="地点名称"><input type="text" id="new-loc-desc" placeholder="资源与描述..."><button onclick="manuallyAddLocation()" class="btn-secondary">手动确立</button><button onclick="aiGenerateRandomLocation()" class="btn-primary">✨ AI 智能衍生</button><button onclick="quickMoveAllNpcsToCurrentLocation()" class="btn-outline" style="grid-column:span 2;"><i class="fas fa-users-rays"></i> 汇聚所有NPC</button></div>
+                </div>
+
+                <!-- 个人资料视图 -->
+                <div id="subview-stats" class="subview-panel hidden" style="padding:16px;">
+                    <div class="player-card" style="border:1px solid var(--border-color); border-radius:20px; overflow:hidden; background:var(--bg-primary); margin-bottom:16px;">
+                        <div class="player-card-header" style="height:6px; background:linear-gradient(90deg, #b45309, #f59e0b);"></div>
+                        <div class="player-card-body" style="padding:16px; display:flex; gap:16px;">
+                            <div class="player-avatar" onclick="openPlayerQuickAvatarUpload()" style="width:80px; height:80px; border-radius:50%; background:var(--bg-tertiary); position:relative; cursor:pointer; overflow:hidden;"><div id="player-avatar-preview"></div><i class="fas fa-camera" style="position:absolute; bottom:4px; right:4px; font-size:12px; background:rgba(0,0,0,0.5); border-radius:50%; padding:4px; color:white;"></i><input type="file" id="player-avatar-upload" class="hidden" accept="image/*" onchange="handlePlayerAvatarUpload(this)"></div>
+                            <div class="player-info" style="flex:1;"><input type="text" id="player-config-name" onchange="updatePlayerCoreName(this.value)" value="我" style="font-weight:700; font-size:1rem; background:transparent; border:none; width:100px;"><span id="player-identity-title">天选编织者</span><button onclick="openPlayerSettingModal()" class="icon-btn"><i class="fas fa-pen-nib"></i></button></div>
+                            <div id="player-setting-preview" class="player-setting-preview"></div>
+                        </div>
+                    </div>
+                    <div class="cheat-bar" style="display:flex; align-items:center; gap:8px; margin-bottom:16px;"><span><i class="fas fa-wand-sparkles"></i> 金手指</span><label class="switch"><input type="checkbox" id="cheat-toggle" onchange="toggleCheatMode()"><span class="slider"></span></label><span id="cheat-status-text">关闭</span><button onclick="adjustAllPlayerStats(10)">全属性+10</button><button onclick="adjustAllPlayerStats(-10)">全属性-10</button></div>
+                    <div id="player-stats-grid" class="stats-grid" style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:16px;"></div>
+                    <div class="inventory-section"><div class="section-header"><h3><i class="fas fa-backpack"></i> 背包资产</h3><button onclick="openPlayerBackpackModal()" class="btn-small">详情管理</button></div><div id="player-backpack-preview" class="backpack-preview"></div></div>
+                    <div class="relations-section"><div class="section-header"><h3><i class="fas fa-heart"></i> 人际关系</h3><button onclick="openPlayerRelationsModal()" class="btn-small">管理</button></div><div id="player-relations-preview" class="relations-preview"></div></div>
+                    <div class="resume-log-section"><div class="section-header"><h3><i class="fas fa-clock-rotate-left"></i> 个人生活日志</h3><button onclick="addPlayerResumeLog()" class="btn-small"><i class="fas fa-plus"></i>录入</button></div><div id="player-resume-log" class="resume-log"></div></div>
+                    <div class="deleted-npcs-section"><div class="section-header"><h3><i class="fas fa-trash-alt"></i> 已删除 NPC 管理</h3><button onclick="refreshDeletedNpcPanel()" class="btn-small"><i class="fas fa-sync-alt"></i>刷新</button><button onclick="clearAllDeletedNpcs()" class="btn-small text-red"><i class="fas fa-trash-can"></i>清空</button></div><div id="deleted-npcs-list" class="deleted-npcs-list"></div></div>
+                </div>
+
+                <!-- NPC视图 -->
+                <div id="subview-npc" class="subview-panel hidden" style="padding:16px;">
+                    <div class="npc-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;"><h2><i class="fas fa-users-viewfinder"></i> 群星阵列</h2><button onclick="openNpcCreationModal()" class="btn-primary"><i class="fas fa-user-plus"></i> 新角色</button></div>
+                    <div class="npc-generate-buttons" style="display:flex; gap:12px; margin-bottom:16px;"><button onclick="aiGenerateNpcByWorld()" class="btn-secondary"><i class="fas fa-globe"></i> 基于世界观衍生</button><button onclick="aiGenerateNpcByStory()" class="btn-secondary"><i class="fas fa-book-open"></i> 基于剧情提取</button></div>
+                    <div id="npc-cards-container" class="npc-cards-container" style="max-height:400px; overflow-y:auto;"></div>
+                    <div class="npc-management" style="margin-top:16px;"><div class="section-header"><span>生态系统管理</span></div><div class="management-buttons" style="display:flex; flex-wrap:wrap; gap:8px;"><button onclick="openFamilyTreeModal()" class="btn-small"><i class="fas fa-sitemap"></i>家族树</button><button onclick="openSituationAnalysisModal()" class="btn-small"><i class="fas fa-chart-pie"></i>局势分析</button><button onclick="openNpcRelationsModal()" class="btn-small"><i class="fas fa-network-wired"></i>关系网</button><button onclick="aiGenerateAllNpcRelations()" class="btn-small"><i class="fas fa-wand-sparkles"></i>AI推演</button><label class="file-label"><i class="fas fa-file-import"></i> 导入角色<input type="file" id="npc-import-file" class="hidden" accept=".json,.csv,.txt,.md,.png,.jpg,.jpeg" onchange="importNpcData(this)"></label></div></div>
+                </div>
+
+                <!-- 世界书视图 -->
+                <div id="subview-worldbook" class="subview-panel hidden" style="padding:16px;">
+                    <div class="worldbook-header"><h2><i class="fas fa-scroll"></i> 世界书 · 记忆编织</h2><p>关键词自动注入背景，记录文明的每一道涟漪</p></div>
+                    <div class="worldbook-section"><div class="section-header"><i class="fas fa-globe-asia"></i> 终极世界观 · 宇宙法则</div><textarea id="wb-global-lore" rows="4" style="width:100%; margin-bottom:8px;"></textarea><button onclick="aiPolishWorldLore()" class="btn-secondary"><i class="fas fa-wand-magic-sparkles"></i> AI 润色世界观</button></div>
+                    <div class="worldbook-section"><div class="section-header"><i class="fas fa-brain"></i> AI 自动记忆提炼<label class="switch"><input type="checkbox" id="wb-auto-log-toggle" onchange="toggleAutoWorldLog()"><span class="slider"></span></label></div><div id="wb-auto-log-setting" class="hidden"><label>🔑 触发关键词</label><input type="text" id="wb-auto-trigger" placeholder="秘密, 阴谋, 宝藏"></div></div>
+                    <div class="worldbook-section"><div class="section-header"><i class="fas fa-scroll"></i> 记忆殿堂 · 条目列表<button onclick="addNewWorldBookEntry()" class="btn-small"><i class="fas fa-plus"></i> 新建记忆</button></div><div id="worldbook-entries-list" class="worldbook-entries-list"></div></div>
+                    <div class="worldbook-section"><div class="section-header"><i class="fas fa-compress-alt"></i> 🧠 深度记忆提取<button onclick="runAILoreSummarize()" class="btn-primary">AI 归纳</button><button onclick="saveSummaryPrompt()" class="btn-secondary">保存提示词</button></div><input type="text" id="wb-summary-prompt" value="请精简提炼并总结以下事件的重大影响，输出100字内的叙事备忘录："></div>
+                </div>
+
+                <!-- 论坛视图 -->
+                <div id="subview-forum" class="subview-panel hidden" style="padding:16px;">
+                    <div class="forum-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;"><h3><i class="fas fa-comments"></i> 玩家社区</h3><div><button onclick="forumRefresh()" class="icon-btn"><i class="fas fa-sync-alt"></i></button><button onclick="closeForumModal()" class="icon-btn"><i class="fas fa-times"></i></button></div></div>
+                    <div class="forum-tabs" style="display:flex; gap:8px; margin-bottom:12px;"><div class="forum-tab active" data-tab="hot"><i class="fas fa-fire"></i> 热门</div><div class="forum-tab" data-tab="latest"><i class="fas fa-clock"></i> 最新</div><div class="forum-tab" data-tab="npc"><i class="fas fa-robot"></i> NPC动态</div></div>
+                    <div id="forum-posts-container" class="forum-posts-container" style="max-height:400px; overflow-y:auto;"></div>
+                    <div class="forum-input-area" style="display:flex; margin-top:12px;"><input type="text" id="forum-post-input" placeholder="分享你的见闻..." maxlength="200" style="flex:1; border-radius:40px; padding:8px 12px; border:1px solid var(--border-color);"><button onclick="forumPublishPost()" class="btn-primary" style="border-radius:40px; margin-left:8px;"><i class="fas fa-paper-plane"></i> 发布</button></div>
+                </div>
+
+                <!-- 设置视图（简化，实际内容从原JS复制） -->
+                <div id="subview-settings" class="subview-panel hidden" style="padding:16px;">
+                    <!-- 设置内容较多，但将从原 game.js 动态生成，此处留空将由JS填充 -->
+                    <div id="settings-dynamic-content"></div>
+                </div>
+            </div>
+
+            <!-- 底部导航栏 -->
+            <div class="bottom-nav" id="bottom-nav-bar">
+                <button onclick="switchSubview('subview-story')" id="nav-subview-story" class="nav-item active"><i class="fas fa-book-open"></i><span>故事</span></button>
+                <button onclick="switchSubview('subview-map')" id="nav-subview-map" class="nav-item"><i class="fas fa-map-location-dot"></i><span>大地图</span></button>
+                <button onclick="switchSubview('subview-stats')" id="nav-subview-stats" class="nav-item"><i class="fas fa-id-card"></i><span>属性日志</span></button>
+                <button onclick="switchSubview('subview-npc')" id="nav-subview-npc" class="nav-item"><i class="fas fa-users-viewfinder"></i><span>NPC</span></button>
+                <button onclick="switchSubview('subview-worldbook')" id="nav-subview-worldbook" class="nav-item"><i class="fas fa-scroll"></i><span>世界书</span></button>
+                <button onclick="switchSubview('subview-forum')" id="nav-subview-forum" class="nav-item"><i class="fas fa-comments"></i><span>论坛</span></button>
+                <button onclick="switchSubview('subview-settings')" id="nav-subview-settings" class="nav-item"><i class="fas fa-sliders-h"></i><span>设置</span></button>
+            </div>
         </div>
     </div>
 
+    <!-- 模态框占位（部分）将在 JS 中动态生成，但预先放置一些公共容器 -->
+    <div id="modal-npc-interactive" class="modal-overlay hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(8px); z-index:100; display:none; align-items:center; justify-content:center;"></div>
+    <div id="modal-npc-creator" class="modal-overlay hidden"></div>
+    <div id="modal-npc-backpack" class="modal-overlay hidden"></div>
+    <!-- ... 更多模态框容器将动态生成或由JS控制，但为省篇幅，暂时省略，实际实现时会在JS中 append -->
+    <div id="global-bg-layer" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:-1; background-size:cover; background-position:center; pointer-events:none;"></div>
+
+    <!-- 模块化脚本加载 -->
     <script src="js/data.js"></script>
     <script src="js/api.js"></script>
     <script src="js/save.js"></script>
