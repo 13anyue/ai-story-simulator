@@ -1,27 +1,57 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>文游模拟器 · 世界引擎</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>文游模拟器 · 高自由度AI世界书引擎</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="css/style.css" rel="stylesheet">
+    <!-- 外部库 -->
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 </head>
-<body class="bg-cover bg-fixed" id="app-body">
+<body class="font-sans antialiased bg-gradient-to-br from-[#fef9f4] to-[#fce9f1] dark:from-[#1a1a2e] dark:to-[#16213e] transition-colors duration-300">
+    <div id="app-root" class="max-w-md mx-auto shadow-2xl border-x border-gray-200 dark:border-gray-800 relative min-h-screen flex flex-col" style="background: var(--bg-primary); color: var(--text-primary);">
+        <!-- 顶部栏（动态） -->
+        <div id="global-toast" class="fixed top-2 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none space-y-2 w-full max-w-xs"></div>
+        <div id="global-loader" class="hidden fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-md z-[60] bg-white/80 dark:bg-black/80 backdrop-blur border-b border-primary/30 py-2 flex justify-center gap-2 text-sm font-bold text-primary"><i class="fas fa-spinner fa-pulse"></i> AI 思考中...</div>
 
-<div id="app-root" class="max-w-md mx-auto bg-white shadow-2xl relative min-h-screen flex flex-col" style="border-radius: 32px 32px 0 0;">
-    <div id="view-container" class="flex-1 overflow-hidden"></div>
-</div>
-<div id="global-modals"></div>
+        <!-- 不同屏幕视图 -->
+        <div id="screen-lobby" class="screen-view p-4 space-y-5 active overflow-y-auto pb-24"></div>
+        <div id="screen-api-config" class="screen-view hidden p-4 space-y-5"></div>
+        <div id="screen-gameplay" class="screen-view hidden flex flex-col flex-1"></div>
 
-<script src="js/data.js"></script>
-<script src="js/api.js"></script>
-<script src="js/save.js"></script>
-<script src="js/systems.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/game-core.js"></script>
-<script src="js/app.js"></script>
+        <!-- 底部导航栏 (仅游戏内显示) -->
+        <div id="bottom-nav-bar" class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 flex justify-around py-2 z-50 hidden safe-pb">
+            <button data-nav="story" class="nav-item flex flex-col items-center gap-0.5 text-primary"><i class="fas fa-book-open text-xl"></i><span class="text-[10px]">剧情</span></button>
+            <button data-nav="map" class="nav-item flex flex-col items-center gap-0.5 text-gray-500"><i class="fas fa-map-location-dot text-xl"></i><span class="text-[10px]">大地图</span></button>
+            <button data-nav="stats" class="nav-item flex flex-col items-center gap-0.5 text-gray-500"><i class="fas fa-id-card text-xl"></i><span class="text-[10px]">档案</span></button>
+            <button data-nav="npc" class="nav-item flex flex-col items-center gap-0.5 text-gray-500"><i class="fas fa-users-viewfinder text-xl"></i><span class="text-[10px]">群星</span></button>
+            <button data-nav="worldbook" class="nav-item flex flex-col items-center gap-0.5 text-gray-500"><i class="fas fa-scroll text-xl"></i><span class="text-[10px]">世界书</span></button>
+            <button data-nav="settings" class="nav-item flex flex-col items-center gap-0.5 text-gray-500"><i class="fas fa-sliders-h text-xl"></i><span class="text-[10px]">设置</span></button>
+        </div>
+
+        <!-- 全局模态框占位（动态JS生成，但有些预置） -->
+        <div id="modal-location-detail" class="modal-overlay hidden"></div>
+        <div id="modal-npc-interactive" class="modal-overlay hidden"></div>
+        <div id="modal-npc-chat" class="modal-overlay hidden"></div>
+        <div id="modal-forum" class="modal-overlay hidden"></div>
+        <div id="modal-worldbook-manager" class="modal-overlay hidden"></div>
+        <div id="modal-relationship-network" class="modal-overlay hidden"></div>
+        <div id="modal-player-edit" class="modal-overlay hidden"></div>
+        <div id="modal-memory-view" class="modal-overlay hidden"></div>
+        <div id="modal-diy-font" class="modal-overlay hidden"></div>
+        <div id="modal-game-start-custom" class="modal-overlay hidden"></div>
+    </div>
+
+    <!-- 脚本模块化引入 -->
+    <script src="js/data.js"></script>
+    <script src="js/save.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/systems.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/game-core.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>
