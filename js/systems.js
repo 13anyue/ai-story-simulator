@@ -36,16 +36,19 @@ const GameSystems = {
         return null;
     },
     randomWeather() {
-        const list = ['晴', '阴', '小雨', '微风'];
-        return list[Math.floor(Math.random() * list.length)];
+        return ['晴', '阴', '小雨', '微风'][Math.floor(Math.random()*4)];
     },
     addPost(game, title, content, author = '玩家') {
         game.forumPosts.unshift({ id: Date.now(), title, content, author, replies: [] });
     },
-    generatePhoneContent(npc) {
-        if (!npc.phoneContent) npc.phoneContent = { apps: [], messages: [] };
-        if (npc.phoneContent.apps.length === 0) {
-            npc.phoneContent.apps = ['备忘录', '日志', '密信'];
+    addNotification(game, text, type='info') {
+        game.notifications.unshift({ id: Date.now(), text, type, read: false });
+        // 更新首页通知徽章
+        const badge = document.getElementById('badge-notification');
+        if (badge) {
+            const unread = game.notifications.filter(n=>!n.read).length;
+            badge.textContent = unread;
+            badge.classList.toggle('hidden', unread===0);
         }
     }
 };
