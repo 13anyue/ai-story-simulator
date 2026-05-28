@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI文字游戏模拟器 - 万象物语</title>
+    <title>万象物语 · AI文字游戏模拟器</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -47,7 +47,7 @@
             <div class="config-card">
                 <div class="form-group"><label>API 端点地址</label><input type="url" id="api-endpoint" placeholder="https://api.example.com/v1/chat/completions" class="form-input"></div>
                 <div class="form-group"><label>API 密钥</label><div class="input-with-icon"><input type="password" id="api-key" placeholder="sk-..." class="form-input"><button class="toggle-visibility" data-target="api-key"><i class="fas fa-eye"></i></button></div></div>
-                <div class="form-group"><label>模型自定义名称</label><input type="text" id="api-model" placeholder="gpt-4 / claude-3-opus" class="form-input"></div>
+                <div class="form-group"><label>模型名称</label><input type="text" id="api-model" placeholder="gpt-4 / claude-3-opus" class="form-input"></div>
                 <div class="form-group"><label>温度</label><input type="range" id="api-temperature" min="0" max="2" step="0.1" value="0.8" class="range-input"><span class="range-value" id="temperature-value">0.8</span></div>
                 <div class="form-group"><label>最大Token</label><input type="number" id="api-max-tokens" value="2048" min="256" max="32768" class="form-input"></div>
                 <div class="btn-row"><button class="btn btn-primary" id="btn-test-api"><i class="fas fa-plug"></i> 测试连通性</button><button class="btn btn-success" id="btn-save-api"><i class="fas fa-save"></i> 保存配置</button></div>
@@ -79,23 +79,20 @@
 
     <!-- 主题美化页 -->
     <div id="page-theme" class="page">
-        <header class="sub-header"><button class="back-btn" data-target="page-profile"><i class="fas fa-arrow-left"></i> 返回</button><h2>主题美化DIY</h2><span></span></header>
+        <header class="sub-header"><button class="back-btn" data-target="page-profile"><i class="fas fa-arrow-left"></i> 返回</button><h2>主题美化</h2><span></span></header>
         <main class="sub-main">
             <div class="config-card"><h3>配色方案</h3><div class="theme-preset-grid" id="theme-preset-grid">
-                <div class="theme-preset active" data-theme="default" style="background:linear-gradient(135deg,#1a1a2e,#16213e)"></div>
-                <div class="theme-preset" data-theme="warm" style="background:linear-gradient(135deg,#3e1a1a,#4a2c17)"></div>
-                <div class="theme-preset" data-theme="forest" style="background:linear-gradient(135deg,#1a3e1a,#1a2e1a)"></div>
-                <div class="theme-preset" data-theme="ocean" style="background:linear-gradient(135deg,#1a2a3e,#0f1f3d)"></div>
-                <div class="theme-preset" data-theme="royal" style="background:linear-gradient(135deg,#2e1a3e,#1a1a3e)"></div>
-                <div class="theme-preset" data-theme="sunset" style="background:linear-gradient(135deg,#3e2a1a,#4a1a2a)"></div>
+                <div class="theme-preset active" data-theme="default" style="background:#6c5ce7"></div>
+                <div class="theme-preset" data-theme="rose" style="background:#e17055"></div>
+                <div class="theme-preset" data-theme="ocean" style="background:#0984e3"></div>
+                <div class="theme-preset" data-theme="forest" style="background:#00b894"></div>
             </div></div>
             <div class="config-card"><h3>自定义颜色</h3>
                 <div class="form-group"><label>主色调</label><input type="color" id="custom-primary-color" value="#6c5ce7" class="color-input"></div>
-                <div class="form-group"><label>背景色</label><input type="color" id="custom-bg-color" value="#1a1a2e" class="color-input"></div>
-                <div class="form-group"><label>卡片背景</label><input type="color" id="custom-card-color" value="#1e1e3a" class="color-input"></div>
-                <div class="form-group"><label>文字颜色</label><input type="color" id="custom-text-color" value="#e0dce8" class="color-input"></div>
-                <div class="form-group"><label>强调色</label><input type="color" id="custom-accent-color" value="#ff6b9d" class="color-input"></div>
-                <div class="form-group"><label>圆角大小</label><input type="range" id="custom-radius" min="4" max="24" value="12" class="range-input"><span class="range-value" id="radius-value">12px</span></div>
+                <div class="form-group"><label>背景色</label><input type="color" id="custom-bg-color" value="#f8f9fa" class="color-input"></div>
+                <div class="form-group"><label>卡片背景</label><input type="color" id="custom-card-color" value="#ffffff" class="color-input"></div>
+                <div class="form-group"><label>文字颜色</label><input type="color" id="custom-text-color" value="#2d3436" class="color-input"></div>
+                <div class="form-group"><label>强调色</label><input type="color" id="custom-accent-color" value="#e84393" class="color-input"></div>
                 <button class="btn btn-primary" id="btn-apply-custom-theme">应用自定义主题</button><button class="btn btn-outline" id="btn-reset-theme">恢复默认</button>
             </div>
         </main>
@@ -164,7 +161,6 @@
                 <div class="panel-scroll">
                     <div class="section-header sticky"><h4>NPC关系表</h4><input type="text" id="npc-search" placeholder="搜索..." class="search-input-sm"></div>
                     <div class="npc-list" id="npc-list"></div>
-                    <div class="npc-detail-panel hidden" id="npc-detail-panel"></div>
                     <div class="life-log-section"><div class="section-header"><h4>生活日志</h4></div><div class="life-log-list" id="life-log-list"></div></div>
                 </div>
             </div>
@@ -196,7 +192,7 @@
             <!-- 设置面板 -->
             <div class="game-panel" id="panel-settings">
                 <div class="panel-scroll">
-                    <div class="config-card"><h4><i class="fas fa-brain"></i> 记忆系统</h4><select id="memory-mode" class="form-input"><option value="recent">最近对话</option><option value="summary">摘要记忆</option></select><input type="number" id="memory-depth" value="20" min="5" class="form-input"></div>
+                    <div class="config-card"><h4><i class="fas fa-brain"></i> 记忆系统</h4><select id="memory-mode" class="form-input"><option value="recent">最近对话</option><option value="summary">摘要记忆</option></select><input type="number" id="memory-depth" value="20" min="5" class="form-input" placeholder="记忆轮数"></div>
                     <div class="config-card"><h4><i class="fas fa-book"></i> 世界书</h4><textarea id="world-book" rows="5" class="form-textarea" placeholder="世界的永恒设定，将影响所有AI回复..."></textarea><button class="btn btn-sm btn-outline" id="btn-save-world-book">保存世界书</button></div>
                     <div class="config-card"><h4>文风设置</h4><select id="writing-style" class="form-input"><option value="elegant">古风雅致</option><option value="vernacular">白话通俗</option></select></div>
                     <div class="config-card"><h4>节日管理</h4><div class="tag-manager" id="festival-tags"></div><div class="btn-row-sm"><input type="text" id="new-festival-name" placeholder="名称" class="form-input-sm"><input type="number" id="new-festival-day" placeholder="间隔天数" min="1" value="30" class="form-input-sm"><button class="btn-sm btn-outline" id="btn-add-festival">+添加</button></div></div>
