@@ -1,22 +1,182 @@
-// js/final-fix.js - 彻底修复所有“开发中”功能（原 game.js 完整移植）
-
+// js/final-fix.js - 最终修复版（无头像库依赖，所有功能完整实现）
 (function() {
-    // ========== 确保全局对象存在 ==========
+    // 确保全局对象存在
     if (!window.DB) window.DB = {};
     if (!window.gameState) window.gameState = {};
     if (!window.gameState.gameState && window.gameState.player) window.gameState.gameState = window.gameState;
     if (!window.gameState.npcs) window.gameState.npcs = [];
 
-    // ========== 家族树 ==========
+    // ==================== 用户管理（多角色） ====================
+    window.openUserManager = function() {
+        if (!window.gameState.userProfiles) window.gameState.userProfiles = [];
+        if (!window.gameState.userProfiles.length) {
+            window.gameState.userProfiles.push({ id: "default", name: "无名旅者", gender: "男", personality: "随遇而安", background: "来自异世界的旅行者", specialSkill: "适应力", secret: "暂无", likes: "探索", boundWorldId: null });
+            window.gameState.activeUserProfileId = "default";
+        }
+        let modal = document.getElementById('user-manager-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'user-manager-modal';
+            modal.className = 'modal-overlay';
+            document.body.appendChild(modal);
+        }
+        let html = `<div class="modal-card"><div class="p-4 border-b flex justify-between"><h3 class="font-bold">用户档案管理</h3><button onclick="closeUserManagerModal()" class="text-gray-500">&times;</button></div><div class="p-4 max-h-[60vh] overflow-y-auto">`;
+        window.gameState.userProfiles.forEach(p => {
+            const isActive = window.gameState.activeUserProfileId === p.id;
+            html += `<div class="border rounded p-3 mb-2"><div class="flex justify-between"><span class="font-bold">${escapeHtml(p.name)}</span>${isActive ? '<span class="text-xs bg-amber-500 text-white px-2 rounded">当前</span>' : ''}</div><div class="text-xs text-gray-500">${escapeHtml(p.personality)} · ${escapeHtml(p.likes)}</div><div class="flex gap-2 mt-2"><button onclick="editUserProfile('${p.id}')" class="btn-small">编辑</button><button onclick="deleteUserProfile('${p.id}')" class="btn-small text-red-500">删除</button>${!isActive ? `<button onclick="setActiveUser('${p.id}')" class="btn-small">启用</button>` : ''}</div></div>`;
+        });
+        html += `<button onclick="showCreateUserForm()" class="w-full btn-primary mt-2">+ 新建用户</button></div><div class="p-3 border-t"><button onclick="closeUserManagerModal()" class="w-full border rounded py-2">关闭</button></div></div>`;
+        modal.innerHTML = html;
+        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
+    };
+
+    window.closeUserManagerModal = function() {
+        const modal = document.getElementById('user-manager-modal');
+        if (modal) modal.style.display = 'none';
+    };
+
+    window.showCreateUserForm = function() {
+        const worldOptions = (window.gameState.worlds || []).map(w => `<option value="${w.id}">${escapeHtml(w.name)}</option>`).join('');
+        const modalHtml = `
+            <div id="user-form-modal" class="modal-overlay" style="display:flex;">
+                <div class="modal-card" style="max-width:400px;">
+                    <div class="p-4 border-b"><h3 class="font-bold">新建用户档案</h3></div>
+                    <div class="p-4 space-y-3 text-sm">
+                        <input type="text" id="new-user-name" class="w-full border rounded p-2" placeholder="昵称">
+                        <select id="new-user-gender" class="w-full border rounded p-2"><option>男</option><option>女</option></select>
+                        <input type="text" id="new-user-personality" class="w-full border rounded p-2" placeholder="性格">
+                        <textarea id="new-user-background" rows="2" class="w-full border rounded p-2" placeholder="背景故事"></textarea>
+                        <input type="text" id="new-user-skill" class="w-full border rounded p-2" placeholder="特殊技能">
+                        <input type="text" id="new-user-likes" class="w-full border rounded p-2" placeholder="喜好">
+                        <select id="new-user-bound-world" class="w-full border rounded p-2"><option value="">无绑定世界</option>${worldOptions}</select>
+                    </div>
+                    <div class="p-3 border-t flex gap-2"><button onclick="closeUserFormModal()" class="flex-1 border rounded">取消</button><button onclick="createNewUserProfile()" class="flex-1 bg-primary text-white rounded font-bold">创建</button></div>
+                </div>
+            </div>`;
+        const old = document.getElementById('user-form-modal');
+        if (old) old.remove();
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    };
+
+    window.closeUserFormModal = function() {
+        const modal = document.getElementById('user-form-modal');
+        if (modal) modal.remove();
+    };
+
+    window.createNewUserProfile = function() {
+        const name = document.getElementById('new-user-name')?.value.trim() || "无名";
+        const gender = document.getElementById('new-user-gender')?.value;
+        const personality = document.getElementById('new-user-personality')?.value.trim() || "随遇而安";
+        const background = document.getElementById('new-user-background')?.value.trim() || "来自异世界的旅人";
+        const specialSkill = document.getElementById('new-user-skill')?.value.trim() || "适应力";
+        const likes = document.getElementById('new-user-likes')?.value.trim() || "无";
+        const boundWorldId = document.getElementById('new-user-bound-world')?.value || null;
+        const newId = "user_" + Date.now();
+        window.gameState.userProfiles.push({ id: newId, name, gender, personality, background, specialSkill, secret: "", likes, boundWorldId });
+        if (!window.gameState.activeUserProfileId) window.gameState.activeUserProfileId = newId;
+        localStorage.setItem("AI_WENYOU_USER_PROFILES", JSON.stringify(window.gameState.userProfiles));
+        localStorage.setItem("AI_WENYOU_ACTIVE_USER", window.gameState.activeUserProfileId);
+        closeUserFormModal();
+        openUserManager();
+        window.showToast?.("用户创建成功");
+    };
+
+    window.editUserProfile = function(profileId) {
+        const p = window.gameState.userProfiles.find(p => p.id === profileId);
+        if (!p) return;
+        const worldOptions = (window.gameState.worlds || []).map(w => `<option value="${w.id}" ${p.boundWorldId === w.id ? 'selected' : ''}>${escapeHtml(w.name)}</option>`).join('');
+        const modalHtml = `
+            <div id="user-edit-modal" class="modal-overlay" style="display:flex;">
+                <div class="modal-card" style="max-width:400px;">
+                    <div class="p-4 border-b"><h3>编辑用户</h3></div>
+                    <div class="p-4 space-y-3">
+                        <input type="text" id="edit-user-name" value="${escapeHtml(p.name)}" class="w-full border rounded p-2">
+                        <select id="edit-user-gender"><option ${p.gender==='男'?'selected':''}>男</option><option ${p.gender==='女'?'selected':''}>女</option></select>
+                        <input type="text" id="edit-user-personality" value="${escapeHtml(p.personality)}" class="w-full border rounded p-2">
+                        <textarea id="edit-user-background" rows="2" class="w-full border rounded p-2">${escapeHtml(p.background)}</textarea>
+                        <input type="text" id="edit-user-skill" value="${escapeHtml(p.specialSkill)}" class="w-full border rounded p-2">
+                        <input type="text" id="edit-user-likes" value="${escapeHtml(p.likes)}" class="w-full border rounded p-2">
+                        <select id="edit-user-bound-world" class="w-full border rounded p-2"><option value="">无绑定世界</option>${worldOptions}</select>
+                    </div>
+                    <div class="p-3 border-t flex gap-2"><button onclick="closeUserEditModal()" class="flex-1 border rounded">取消</button><button onclick="saveUserEdit('${profileId}')" class="flex-1 bg-primary text-white rounded font-bold">保存</button></div>
+                </div>
+            </div>`;
+        const old = document.getElementById('user-edit-modal');
+        if (old) old.remove();
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    };
+
+    window.closeUserEditModal = function() {
+        const modal = document.getElementById('user-edit-modal');
+        if (modal) modal.remove();
+    };
+
+    window.saveUserEdit = function(profileId) {
+        const p = window.gameState.userProfiles.find(p => p.id === profileId);
+        if (!p) return;
+        p.name = document.getElementById('edit-user-name')?.value.trim() || p.name;
+        p.gender = document.getElementById('edit-user-gender')?.value;
+        p.personality = document.getElementById('edit-user-personality')?.value.trim();
+        p.background = document.getElementById('edit-user-background')?.value.trim();
+        p.specialSkill = document.getElementById('edit-user-skill')?.value.trim();
+        p.likes = document.getElementById('edit-user-likes')?.value.trim();
+        p.boundWorldId = document.getElementById('edit-user-bound-world')?.value || null;
+        localStorage.setItem("AI_WENYOU_USER_PROFILES", JSON.stringify(window.gameState.userProfiles));
+        closeUserEditModal();
+        openUserManager();
+        if (window.gameState.activeUserProfileId === profileId && window.gameState.gameState && p.boundWorldId === window.gameState.gameState.worldId) {
+            applyUserProfileToGame(p);
+        }
+    };
+
+    window.deleteUserProfile = function(profileId) {
+        if (window.gameState.userProfiles.length === 1) { window.showToast?.("至少保留一个用户", false); return; }
+        if (confirm("确定删除此用户？")) {
+            window.gameState.userProfiles = window.gameState.userProfiles.filter(p => p.id !== profileId);
+            if (window.gameState.activeUserProfileId === profileId) {
+                window.gameState.activeUserProfileId = window.gameState.userProfiles[0].id;
+                localStorage.setItem("AI_WENYOU_ACTIVE_USER", window.gameState.activeUserProfileId);
+            }
+            localStorage.setItem("AI_WENYOU_USER_PROFILES", JSON.stringify(window.gameState.userProfiles));
+            openUserManager();
+        }
+    };
+
+    window.setActiveUser = function(profileId) {
+        window.gameState.activeUserProfileId = profileId;
+        localStorage.setItem("AI_WENYOU_ACTIVE_USER", profileId);
+        const profile = window.gameState.userProfiles.find(p => p.id === profileId);
+        if (profile && window.gameState.gameState) {
+            applyUserProfileToGame(profile);
+        }
+        openUserManager();
+        window.showToast?.(`当前用户切换为「${profile.name}」`);
+    };
+
+    function applyUserProfileToGame(profile) {
+        if (!window.gameState.gameState) return;
+        const gs = window.gameState.gameState;
+        gs.player.name = profile.name;
+        if (!gs.player.jcl) gs.player.jcl = {};
+        gs.player.jcl.gender = profile.gender;
+        gs.player.jcl.personality = profile.personality;
+        gs.player.jcl.background = profile.background;
+        gs.player.jcl.specialSkill = profile.specialSkill;
+        gs.player.jcl.secret = profile.secret;
+        gs.player.jcl.likes = profile.likes;
+        if (typeof window.autoSaveGameState === 'function') window.autoSaveGameState();
+        if (typeof window.updatePanelUI === 'function') window.updatePanelUI();
+    }
+
+    // ==================== 其他功能（家族树、局势分析、关系网、背包、物品等） ====================
+    // 家族树
     window.openFamilyTreeModal = function(npcIdx) {
         const idx = (npcIdx !== undefined) ? npcIdx : (window.DB.activeNpcIntIdx || 0);
         const npc = window.gameState.npcs?.[idx];
         if (!npc) { alert("未找到可用的NPC数据"); return; }
         window.DB.activeNpcIntIdx = idx;
-
-        // 构建 NPC 下拉选项
         const npcOptions = window.gameState.npcs.map((n, i) => `<option value="${i}" ${i === idx ? 'selected' : ''}>${n.name}</option>`).join('');
-
         let modal = document.getElementById('modal-family-tree');
         if (!modal) {
             modal = document.createElement('div');
@@ -24,7 +184,6 @@
             modal.className = 'modal-overlay hidden';
             document.body.appendChild(modal);
         }
-
         const hasFamily = npc.family && npc.family.parents;
         const content = hasFamily ? `
             <div class="space-y-4 text-center">
@@ -35,7 +194,6 @@
                 <div class="flex flex-wrap gap-2 justify-center">${(npc.family.children || []).map(c => `<span class="px-3 py-1 bg-gray-800 text-white rounded-lg text-xs">${escapeHtml(c)}</span>`).join('') || '<span class="text-xs text-gray-400">尚无后嗣</span>'}</div>
             </div>
         ` : `<div class="text-center py-8 text-gray-400">该角色的家族谱系尚未被 AI 挖掘。</div>`;
-
         modal.innerHTML = `
             <div class="modal-card" style="max-width:420px;">
                 <div class="p-4 border-b flex justify-between items-center"><h3 class="font-bold">家族谱系 · 角色切换</h3><button onclick="document.getElementById('modal-family-tree').style.display='none'" class="text-gray-400">&times;</button></div>
@@ -74,7 +232,7 @@
         if (typeof window.autoSaveGameState === 'function') window.autoSaveGameState();
     };
 
-    // ========== 局势分析 ==========
+    // 局势分析
     window.openSituationAnalysisModal = function() {
         const npcs = window.gameState.npcs || [];
         const factions = {};
@@ -100,15 +258,13 @@
         modal.classList.remove('hidden');
     };
 
-    // ========== NPC 关系网 ==========
+    // NPC 关系网
     window.openNpcRelationsModal = function(idx) {
         const npcIdx = (idx !== undefined) ? idx : (window.DB.activeNpcIntIdx || 0);
         const npc = window.gameState.npcs?.[npcIdx];
         if (!npc) { alert("未找到该角色的关系记录"); return; }
         window.DB.currentRelationsNpcIdx = npcIdx;
         if (!npc.relations) npc.relations = [];
-        renderNpcRelationsList();
-
         let modal = document.getElementById('modal-npc-relations');
         if (!modal) {
             modal = document.createElement('div');
@@ -189,7 +345,7 @@
         if (modal) modal.style.display = 'none';
     };
 
-    // ========== AI 推演全员关系网 ==========
+    // AI 推演全员关系网
     window.aiGenerateAllNpcRelations = async function() {
         const npcs = window.gameState.npcs;
         if (npcs.length < 2) { alert("NPC数量不足"); return; }
@@ -212,7 +368,7 @@
         } catch(e) { alert("AI推演失败"); }
     };
 
-    // ========== NPC 背包与物品详情 ==========
+    // NPC 背包
     window.openNPCBackpackModal = function(npcId) {
         const npc = window.gameState.npcs.find(n => n.id === npcId);
         if (!npc) return;
@@ -229,7 +385,7 @@
         modal.innerHTML = `
             <div class="modal-card">
                 <div class="p-4 border-b flex justify-between"><h3>${escapeHtml(npc.name)} 的背包</h3><button onclick="closeNpcBackpackModal()">&times;</button></div>
-                <div class="p-3 border-b flex gap-2"><button onclick="switchBackpackTab('normal')" id="bp-tab-normal" class="px-3 py-1 rounded-full text-xs bg-amber-500">🎒 背包物品</button><button onclick="switchBackpackTab('private')" id="bp-tab-private" class="px-3 py-1 rounded-full text-xs bg-gray-200">🔒 私密物品</button></div>
+                <div class="p-3 border-b flex gap-2"><button onclick="switchBackpackTab('normal')" id="bp-tab-normal" class="px-3 py-1 rounded-full text-xs bg-amber-500 text-white">🎒 背包物品</button><button onclick="switchBackpackTab('private')" id="bp-tab-private" class="px-3 py-1 rounded-full text-xs bg-gray-200">🔒 私密物品</button></div>
                 <div id="bp-normal-panel" class="p-4 space-y-2"></div>
                 <div id="bp-private-panel" class="p-4 space-y-2 hidden"></div>
                 <div id="bp-item-detail" class="p-4 border-t hidden"><div class="font-bold">物品详情</div><div id="bp-item-detail-content"></div><div class="flex gap-2 mt-2"><button onclick="closeItemDetail()" class="border px-3 py-1 rounded">关闭</button></div></div>
@@ -339,7 +495,7 @@
         if (detail) detail.classList.add('hidden');
     };
 
-    // ========== 物品详情模态框（主角背包） ==========
+    // 主角物品详情
     window.openItemDetailModal = function(index) {
         const item = window.gameState.gameState?.player?.inventory?.[index];
         if (!item) return;
@@ -413,29 +569,81 @@
                 if (typeof window.updatePanelUI === 'function') window.updatePanelUI();
                 closeItemDetailModal();
                 window.showToast?.(`使用了 ${item.name}`);
-                // 可选：通知 AI
                 if (typeof window.callAI === 'function') window.callAI(`我使用了背包里的【${item.name}】。`);
             }
         }
     };
 
-    // ========== 主角/NPC 年龄生日编辑已在 features.js 中，确保函数存在 ==========
-    // ========== 命运点数与时间线回溯 ==========
+    // 传闻系统
+    window.toggleRumorPanel = function() {
+        const panel = document.getElementById('rumor-panel');
+        if (panel) panel.classList.toggle('hidden');
+    };
+    if (typeof window.generateRumor !== 'function') {
+        window.generateRumor = async function(actionDesc) {
+            const terminal = document.getElementById('story-terminal');
+            const recentStory = terminal ? terminal.innerText.slice(-300) : actionDesc;
+            if (!recentStory) return;
+            try {
+                const rumor = await window.callLLMRequest?.(`根据以下剧情生成一条传闻(30字内):\n${recentStory}`, "你是传闻生成器");
+                if (rumor && rumor.trim()) {
+                    if (!window.DB.rumors) window.DB.rumors = [];
+                    window.DB.rumors.unshift(rumor.trim());
+                    if (window.DB.rumors.length > 10) window.DB.rumors.pop();
+                    const panel = document.getElementById('rumor-panel');
+                    const text = document.getElementById('rumor-text');
+                    if (panel && text) { text.innerText = rumor; panel.classList.remove('hidden'); }
+                    if (typeof window.autoSaveGameState === 'function') window.autoSaveGameState();
+                }
+            } catch(e) {}
+        };
+    }
+
+    // 深度记忆提取
+    window.runAILoreSummarize = async function() {
+        const termText = document.getElementById('story-terminal')?.innerText;
+        if (!termText || termText.length < 50) { alert("故事细节过于单薄，无法归纳。"); return; }
+        const prompt = document.getElementById('wb-summary-prompt')?.value || "请精简提炼并总结以下事件的重大影响，输出100字内的叙事备忘录：";
+        try {
+            const summary = await window.callLLMRequest?.(`${prompt}\n\n${termText.slice(-2000)}`, "你是编年史提炼大师");
+            if (summary && window.gameState.gameState) {
+                if (!window.gameState.gameState.worldBookEntries) window.gameState.gameState.worldBookEntries = [];
+                window.gameState.gameState.worldBookEntries.push({ keywords: `快照-${Date.now()}`, text: summary.trim(), permanent: true, depth: 5 });
+                if (typeof window.renderWorldBook === 'function') window.renderWorldBook();
+                if (typeof window.autoSaveGameState === 'function') window.autoSaveGameState();
+                alert("历史记忆已浓缩注入世界书！");
+            }
+        } catch(e) { alert("记忆归纳失败"); }
+    };
+    window.saveSummaryPrompt = function() {
+        const prompt = document.getElementById('wb-summary-prompt')?.value;
+        if (prompt) localStorage.setItem("AI_WENYOU_SUMMARY_PROMPT", prompt);
+        alert("深度记忆提取提示词已保存");
+    };
+
+    // 命运点数与时间线回溯
     window.openTimelineModal = function() {
         const milestones = window.DB.timelineMilestones || [];
-        let html = `<div id="modal-timeline" class="modal-overlay" style="display:flex;"><div class="modal-card"><div class="p-4 border-b flex justify-between"><h3>关键抉择里程碑</h3><button onclick="closeTimelineModal()">&times;</button></div><div class="p-4 max-h-[60vh] overflow-y-auto">`;
+        let modal = document.getElementById('modal-timeline');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'modal-timeline';
+            modal.className = 'modal-overlay hidden';
+            document.body.appendChild(modal);
+        }
+        let html = `<div class="modal-card"><div class="p-4 border-b flex justify-between"><h3>关键抉择里程碑</h3><button onclick="closeTimelineModal()">&times;</button></div><div class="p-4 max-h-[60vh] overflow-y-auto">`;
         if (!milestones.length) html += '<p>暂无关键抉择记录</p>';
         else milestones.forEach((m, i) => {
-            html += `<div class="border rounded p-2 mb-2"><div class="font-bold">${m.timestamp}</div><div>${m.description}</div><button onclick="selectTimelineNode(${i})" class="mt-1 text-xs bg-gray-200 px-2 py-1 rounded">回溯</button></div>`;
+            html += `<div class="border rounded p-2 mb-2"><div class="font-bold">${escapeHtml(m.timestamp)}</div><div>${escapeHtml(m.description)}</div><button onclick="selectTimelineNode(${i})" class="mt-1 text-xs bg-gray-200 px-2 py-1 rounded">回溯</button></div>`;
         });
-        html += `<div class="mt-3 text-xs text-gray-500">消耗 1 命运点数可回溯至任一节点</div><div class="p-3 border-t"><button onclick="attemptTimelineRollback()" class="w-full bg-primary text-white py-2 rounded">确认回溯</button></div></div></div></div>`;
-        const old = document.getElementById('modal-timeline');
-        if (old) old.remove();
-        document.body.insertAdjacentHTML('beforeend', html);
+        html += `<div class="mt-3 text-xs text-gray-500">消耗 1 命运点数可回溯至任一节点</div><div class="p-3 border-t"><button onclick="attemptTimelineRollback()" class="w-full bg-primary text-white py-2 rounded">确认回溯</button></div></div></div>`;
+        modal.innerHTML = html;
+        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
     };
     window.closeTimelineModal = function() {
         const modal = document.getElementById('modal-timeline');
-        if (modal) modal.remove();
+        if (modal) modal.style.display = 'none';
     };
     window.selectedTimelineIndex = null;
     window.selectTimelineNode = function(index) {
@@ -466,55 +674,7 @@
         if (typeof window.triggerContinueStory === 'function') window.triggerContinueStory();
     };
 
-    // ========== 传闻系统 ==========
-    window.toggleRumorPanel = function() {
-        const panel = document.getElementById('rumor-panel');
-        if (panel) panel.classList.toggle('hidden');
-    };
-    // generateRumor 已在 game-core.js 中实现，这里确保存在
-    if (typeof window.generateRumor !== 'function') {
-        window.generateRumor = async function(actionDesc) {
-            const terminal = document.getElementById('story-terminal');
-            const recentStory = terminal ? terminal.innerText.slice(-300) : actionDesc;
-            if (!recentStory) return;
-            try {
-                const rumor = await window.callLLMRequest?.(`根据以下剧情生成一条传闻(30字内):\n${recentStory}`, "你是传闻生成器");
-                if (rumor && rumor.trim()) {
-                    if (!window.DB.rumors) window.DB.rumors = [];
-                    window.DB.rumors.unshift(rumor.trim());
-                    if (window.DB.rumors.length > 10) window.DB.rumors.pop();
-                    const panel = document.getElementById('rumor-panel');
-                    const text = document.getElementById('rumor-text');
-                    if (panel && text) { text.innerText = rumor; panel.classList.remove('hidden'); }
-                    if (typeof window.autoSaveGameState === 'function') window.autoSaveGameState();
-                }
-            } catch(e) {}
-        };
-    }
-
-    // ========== 深度记忆提取 ==========
-    window.runAILoreSummarize = async function() {
-        const termText = document.getElementById('story-terminal')?.innerText;
-        if (!termText || termText.length < 50) { alert("故事细节过于单薄，无法归纳。"); return; }
-        const prompt = document.getElementById('wb-summary-prompt')?.value || "请精简提炼并总结以下事件的重大影响，输出100字内的叙事备忘录：";
-        try {
-            const summary = await window.callLLMRequest?.(`${prompt}\n\n${termText.slice(-2000)}`, "你是编年史提炼大师");
-            if (summary && window.gameState.gameState) {
-                if (!window.gameState.gameState.worldBookEntries) window.gameState.gameState.worldBookEntries = [];
-                window.gameState.gameState.worldBookEntries.push({ keywords: `快照-${Date.now()}`, text: summary.trim(), permanent: true, depth: 5 });
-                if (typeof window.renderWorldBook === 'function') window.renderWorldBook();
-                if (typeof window.autoSaveGameState === 'function') window.autoSaveGameState();
-                alert("历史记忆已浓缩注入世界书！");
-            }
-        } catch(e) { alert("记忆归纳失败"); }
-    };
-    window.saveSummaryPrompt = function() {
-        const prompt = document.getElementById('wb-summary-prompt')?.value;
-        if (prompt) localStorage.setItem("AI_WENYOU_SUMMARY_PROMPT", prompt);
-        alert("深度记忆提取提示词已保存");
-    };
-
-    // ========== 辅助函数 ==========
+    // 通用辅助函数
     function escapeHtml(str) {
         if (!str) return '';
         return String(str).replace(/[&<>]/g, function(m) {
@@ -525,5 +685,19 @@
         });
     }
 
-    console.log("✅ final-fix.js 已加载，所有功能已修复");
+    // 覆盖头像库函数，避免报错
+    if (typeof window.assignAvatarFromLibrary !== 'function') {
+        window.assignAvatarFromLibrary = function() { return; };
+    }
+    if (window.getSafeAvatarURL && window.getSafeAvatarURL.toString().includes('AVATAR_LIBRARY')) {
+        window.getSafeAvatarURL = function(avatarData) {
+            if (!avatarData) return null;
+            if (typeof avatarData === 'string' && (avatarData.startsWith('http') || avatarData.startsWith('blob:') || avatarData.startsWith('data:'))) {
+                return avatarData;
+            }
+            return null;
+        };
+    }
+
+    console.log("✅ final-fix.js 已加载，所有功能完整可用");
 })();
