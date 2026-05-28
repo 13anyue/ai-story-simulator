@@ -1,95 +1,278 @@
-// js/systems.js - 核心系统与辅助函数
+// js/systems.js - 核心游戏系统模块
 
-// 全局辅助函数
-function switchScreen(screenId) {
-    closeAllModals();
-    document.querySelectorAll('.screen-view').forEach(s => { s.classList.add('hidden'); s.style.display = 'none'; });
-    const target = document.getElementById(screenId);
-    if (target) {
-        target.classList.remove('hidden');
-        target.style.display = screenId === 'screen-gameplay' ? 'flex' : 'block';
+// ==================== 初始化与数据准备 ====================
+
+/**
+ * 重置游戏记忆（清除所有记忆内容）
+ */
+function resetGameMemory() {
+    if (!window.gameState) return;
+    window.gameState.memory = {
+        history_summary: "",
+        key_events: [],
+        relations: [],
+        tasks: "",
+        world_core: "",
+        last_update: "",
+        last_history_index: 0,
+        world_summarized: false
+    };
+}
+
+/**
+ * 确保人物关系网数据结构存在
+ */
+function ensureRelationshipNetworkInitialized() {
+    if (!window.gameState) return;
+    if (!window.gameState.relationshipNetwork || typeof window.gameState.relationshipNetwork !== 'object') {
+        window.gameState.relationshipNetwork = { nodes: [], edges: [] };
     }
-    const navBar = document.getElementById('bottom-nav-bar');
-    if (screenId === 'screen-gameplay') {
-        if (navBar) navBar.style.display = 'flex';
-        document.getElementById('game-top-bar').style.display = '';
-        applyBubbleStyles();
-    } else {
-        if (navBar) navBar.style.display = 'none';
-        document.getElementById('game-top-bar').style.display = 'none';
-        document.querySelectorAll('.subview-panel').forEach(p => p.classList.add('hidden'));
+    if (!Array.isArray(window.gameState.relationshipNetwork.nodes)) {
+        window.gameState.relationshipNetwork.nodes = [];
     }
-    if (screenId === 'screen-lobby') {
-        renderLobbyWorlds();
-        renderLobbySaves();
-        checkAutoSavedGame();
+    if (!Array.isArray(window.gameState.relationshipNetwork.edges)) {
+        window.gameState.relationshipNetwork.edges = [];
     }
 }
 
-function switchSubview(subviewId) {
-    document.querySelectorAll('.subview-panel').forEach(el => el.classList.add('hidden'));
-    document.getElementById(subviewId).classList.remove('hidden');
-    const navs = ['story', 'map', 'stats', 'npc', 'worldbook', 'forum', 'settings'];
-    navs.forEach(n => {
-        const btn = document.getElementById(`nav-subview-${n}`);
-        if (btn) {
-            if (`subview-${n}` === subviewId) {
-                btn.classList.add('active');
-                btn.querySelector('span').classList.add('font-bold');
-            } else {
-                btn.classList.remove('active');
-                btn.querySelector('span')?.classList.remove('font-bold');
+/**
+ * 检测是否为宫斗/古风模式
+ */
+function detectPalaceMode() {
+    if (!window.gameState) return false;
+    const combined = (window.gameState.worldName + window.gameState.globalLore + window.gameState.systemPrompt).toLowerCase();
+    const keywords = ['后宫','宫廷','皇','妃','嫔','秀女','侍寝','翻牌','凤','龙','陛下','皇上','皇后','太后','贵妃','贵人','答应','常在','宫殿','御花园','金銮','冷宫','选秀','册封'];
+    return keywords.some(kw => combined.includes(kw));
+}
+
+// ==================== 世界与游戏启动 ====================
+
+/**
+ * 清除自动存档
+ */
+function clearAutoSave() {
+    localStorage.removeItem("AI_WENYOU_AUTOSAVE");
+    const banner = document.getElementById('lobby-resume-banner');
+    if (banner) banner.classList.add('hidden');
+}
+
+/**
+ * 启动世界引擎
+ * @param {string} worldId - 世界ID
+ */
+async function launchWorldEngine(worldId) {
+    const world = window.gameState.worlds?.find(w => w.id === worldId);
+    if (!world) return;
+    clearAutoSave();
+
+    window.gameState.activeWorldId = worldId;
+    window.gameState.gameState = {
+        worldId: world.id,
+        worldName: world.name,
+        globalLore: world.globalLore,
+        systemPrompt: world.systemPrompt,
+        currentLocationName: world.locations.length > 0 ? world.locations[0].name : "未知荒野",
+        currentLocationId: world.locations.length > 0 ? world.locations[0].id : "",
+        player: {
+            name: "我",
+            identity: "天选玩家",
+            stats: {},
+            inventory: [],
+            backpack: [],
+            privateInventory: [],
+            relations: [],
+            resumeLog: [{ time: "初始", event: "初次降临", tags: ["序幕"] }],
+            jcl: {
+                age: "未知", gender: "未定", personality: "自由灵魂", background: "来自异世界的旅行者",
+                characterSetting: "行事随心", secret: "尚未发现", likes: "寻找真相", dislikes: "未知",
+                specialSkill: "适应力", healthStatus: "健康", title: "旅人", faction: "无", playerCallName: "我"
             }
+        },
+        npcs: JSON.parse(JSON.stringify(world.npcs || [])),
+        locations: JSON.parse(JSON.stringify(world.locations || [])),
+        worldBookEntries: [{ keywords: "世界规则", text: world.globalLore, permanent: true, depth: 5 }],
+        storyHistory: []
+    };
+
+    // 初始化主角属性
+    world.customStats?.forEach(stat => {
+        window.gameState.gameState.player.stats[stat] = 50;
+    });
+
+    // 确保每个 NPC 都有完整 jcl
+    window.gameState.gameState.npcs.forEach(npc => {
+        if (!npc.jcl) npc.jcl = { ...window.JUNCHENGLU_NPC_DEFAULTS };
+        if (!npc.jcl.resumeLog) npc.jcl.resumeLog = [];
+        if (!npc.jcl.currentActivity) {
+            const personality = npc.jcl.personality || "普通";
+            if (personality.includes("内向")) npc.jcl.currentActivity = "独坐一旁，沉默不语";
+            else if (personality.includes("开朗")) npc.jcl.currentActivity = "热情地与路人攀谈";
+            else npc.jcl.currentActivity = "正在四处走动";
         }
     });
-    if (subviewId === 'subview-map') renderYiCiYuanMap();
-    if (subviewId === 'subview-stats') { renderPlayerStatsAndResume(); refreshDeletedNpcPanel(); }
-    if (subviewId === 'subview-npc') renderNpcCards();
-    if (subviewId === 'subview-worldbook') renderWorldBook();
-    if (subviewId === 'subview-forum') { if (typeof initForumData === 'function') initForumData(); }
-    if (subviewId === 'subview-settings') {
-        document.getElementById('set-system-prompt').value = DB.gameState ? DB.gameState.systemPrompt : '';
-        document.getElementById('diy-inline-component-prompt').value = DB.inlineComponentPrompt;
-        document.getElementById('ai-help-prompt-setting').value = localStorage.getItem("AI_WENYOU_HELP_PROMPT") || "";
-        document.getElementById('global-npc-logic-prompt').value = DB.globalNpcLogicPrompt;
-        document.getElementById('diy-bubble-self-bg').value = DB.bubbleStyles.selfBg;
-        document.getElementById('diy-bubble-self-color').value = DB.bubbleStyles.selfColor;
-        document.getElementById('diy-bubble-npc-bg').value = DB.bubbleStyles.npcBg;
-        document.getElementById('diy-bubble-npc-color').value = DB.bubbleStyles.npcColor;
-        document.getElementById('diy-weather').value = DB.weather;
-        document.getElementById('diy-festival').value = DB.festivalCustom ? "自定义节日" : (["平日","春节","中秋","七夕","冬至","万圣节","圣诞节"].includes(DB.festival) ? DB.festival : "平日");
-        document.getElementById('diy-festival-custom').value = DB.festivalCustom;
-        renderPromptPresetList();
-        loadUserCorePrompt();
+
+    // 初始化世界时间
+    if (window.DB) {
+        window.DB.worldTime = { year: 1, season: "春季", month: 4, day: 3, hour: 9, minute: 20, period: "上午" };
+        window.DB.weather = "晴好";
+        window.DB.festival = "平日";
+        window.DB.festivalCustom = "";
+        window.DB.isPalaceMode = detectPalaceMode();
+    }
+
+    // 更新UI
+    const titleEl = document.getElementById('gp-world-title');
+    if (titleEl) titleEl.innerText = world.name;
+    if (typeof window.updateGameplayHeaderLocation === 'function') window.updateGameplayHeaderLocation();
+    if (typeof window.updateWorldTimeDisplay === 'function') window.updateWorldTimeDisplay();
+    if (typeof window.updateWeatherDisplay === 'function') window.updateWeatherDisplay();
+    if (typeof window.updateFestivalDisplay === 'function') window.updateFestivalDisplay();
+    if (typeof window.applyMapBackgroundFromUrl === 'function') window.applyMapBackgroundFromUrl();
+
+    // 切换到游戏界面
+    if (typeof window.switchScreen === 'function') window.switchScreen('screen-gameplay');
+    if (typeof window.switchSubview === 'function') window.switchSubview('subview-story');
+
+    // 设置系统提示词输入框
+    const sysPromptInput = document.getElementById('set-system-prompt');
+    if (sysPromptInput) sysPromptInput.value = world.systemPrompt;
+
+    // 保存并初始化地图
+    if (typeof window.autoSaveGameState === 'function') window.autoSaveGameState();
+    if (typeof window.applyBubbleStyles === 'function') window.applyBubbleStyles();
+
+    // 初始化多地图
+    if (!window.DB.maps) window.DB.maps = [];
+    window.DB.maps = [{
+        id: "map_" + Date.now(),
+        name: world.name + "·主世界",
+        bgUrl: window.DB.mapBackgroundUrl || "",
+        locations: window.gameState.gameState.locations
+    }];
+    window.DB.currentMapId = window.DB.maps[0].id;
+
+    // 生成初始剧情
+    if (typeof window.triggerInitialAILogic === 'function') window.triggerInitialAILogic();
+}
+
+/**
+ * 退出世界返回大厅
+ */
+function exitWorldToLobby() {
+    if (typeof window.autoSaveGameState === 'function') window.autoSaveGameState();
+    window.gameState.gameState = null;
+    window.gameState.activeWorldId = null;
+    if (window.DB) window.DB.wechatChatHistory = {};
+
+    const navBar = document.getElementById('bottom-nav-bar');
+    if (navBar) navBar.style.display = 'none';
+
+    document.querySelectorAll('.subview-panel').forEach(panel => panel.classList.add('hidden'));
+    const storyTerminal = document.getElementById('story-terminal');
+    if (storyTerminal) storyTerminal.innerHTML = '';
+
+    if (typeof window.switchScreen === 'function') window.switchScreen('screen-lobby');
+    if (typeof window.checkAutoSavedGame === 'function') window.checkAutoSavedGame();
+    window.showToast?.("已退出世界，进度已自动保存。");
+}
+
+/**
+ * 重启当前世界
+ */
+function restartCurrentGame() {
+    if (!window.gameState.gameState) { window.showToast?.("没有激活的游戏世界", false); return; }
+    const worldId = window.gameState.gameState.worldId;
+    const world = window.gameState.worlds?.find(w => w.id === worldId);
+    if (!world) { window.showToast?.("找不到当前世界的数据", false); return; }
+    if (!confirm("确定要重新开始当前世界的剧情吗？\n警告：当前的剧情记录将被清空，时间重置回初始点，但人物属性会保留。")) return;
+
+    window.gameState.gameState.storyHistory = [];
+    window.gameState.gameState.terminalLines = [];
+    window.gameState.gameState.player.resumeLog = [{ time: "初始", event: "时光倒流，重新降临此界。", tags: ["重置"] }];
+
+    const term = document.getElementById('story-terminal');
+    if (term) term.innerHTML = '';
+    const choicesBox = document.getElementById('story-choices-box');
+    if (choicesBox) choicesBox.innerHTML = '';
+
+    if (window.DB) {
+        window.DB.worldTime = { year: 1, season: "春季", month: 4, day: 3, hour: 9, minute: 20, period: "上午" };
+        if (typeof window.updateWorldTimeDisplay === 'function') window.updateWorldTimeDisplay();
+    }
+    if (typeof window.autoSaveGameState === 'function') window.autoSaveGameState();
+
+    const hasSetup = localStorage.getItem(`AI_WENYOU_USER_SETUP_DONE_${world.id}`);
+    if (hasSetup && typeof window.triggerInitialAILogic === 'function') {
+        window.triggerInitialAILogic();
+    }
+    window.showToast?.("世界已重启，新的故事开始演化...");
+}
+
+// ==================== 辅助函数 ====================
+
+/**
+ * 获取地点对象
+ * @param {string} locationId
+ * @returns {Object|null}
+ */
+function getLocationById(locationId) {
+    if (!window.gameState?.gameState?.locations) return null;
+    return window.gameState.gameState.locations.find(l => l.id === locationId);
+}
+
+/**
+ * 获取某地点的 NPC 列表
+ * @param {string} locationId
+ * @returns {Array}
+ */
+function getNpcsAtLocation(locationId) {
+    if (!window.gameState?.gameState?.npcs) return [];
+    return window.gameState.gameState.npcs.filter(npc => (npc.jcl && npc.jcl.location) === locationId);
+}
+
+/**
+ * 更新游戏头部位置显示
+ */
+function updateGameplayHeaderLocation() {
+    if (!window.gameState?.gameState) return;
+    const badge = document.getElementById('gp-location-badge');
+    if (badge) badge.innerText = `位置: ${window.gameState.gameState.currentLocationName}`;
+}
+
+/**
+ * 检查是否有自动存档
+ */
+function checkAutoSavedGame() {
+    const autoSave = localStorage.getItem("AI_WENYOU_AUTOSAVE");
+    if (autoSave) {
+        try {
+            const parsed = JSON.parse(autoSave);
+            if (parsed.worldName) {
+                const banner = document.getElementById('lobby-resume-banner');
+                if (banner) banner.classList.remove('hidden');
+                const worldNameSpan = document.getElementById('resume-world-name');
+                if (worldNameSpan) worldNameSpan.innerText = `上次游玩：${parsed.worldName} · 位置：${parsed.currentLocationName || '未知'}`;
+            }
+        } catch(e) {}
     }
 }
 
-function closeAllModals() {
-    document.querySelectorAll('.modal-overlay').forEach(modal => {
-        modal.style.display = 'none';
-        modal.classList.add('hidden');
-    });
-}
-
-function toggleDayNight() {
-    DB.isNightMode = !DB.isNightMode;
-    localStorage.setItem("AI_WENYOU_NIGHTMODE", DB.isNightMode);
-    if (DB.isNightMode) {
-        document.documentElement.classList.add('theme-night');
-        document.body.classList.add('theme-night');
-    } else {
-        document.documentElement.classList.remove('theme-night');
-        document.body.classList.remove('theme-night');
-        const userBg = document.getElementById('diy-color-bg')?.value || '#fafafa';
-        const userText = document.getElementById('diy-color-text')?.value || '#18181b';
-        document.getElementById('app-root').style.color = userText;
+// ==================== 生成初始剧情 ====================
+function triggerInitialAILogic() {
+    const term = document.getElementById('story-terminal');
+    if (term) {
+        term.innerHTML = `<div class="text-xs italic animate-pulse"><i class="fas fa-spinner fa-spin"></i> AI正在演化初始剧情...</div>`;
     }
-    showToast(DB.isNightMode ? '🌙 夜间模式' : '☀️ 日间模式');
-    updateLobbyDayNightIcon();
+    const initPrompt = `【序章】这是世界「${window.gameState.gameState.worldName}」的开端。请为主角在「${window.gameState.gameState.currentLocationName}」描绘一段精彩的开局剧情。当前时间：${document.getElementById('gp-world-history-preview')?.innerText || ''}，天气：${window.DB?.weather || "晴好"}，节日：${window.DB?.festival || "平日"}。对白使用【NPC名：话语】格式。`;
+    if (typeof window.generateStoryIteration === 'function') {
+        window.generateStoryIteration(initPrompt);
+    }
 }
 
+// ==================== 时间与天气 ====================
 function updateWorldTimeDisplay() {
-    const wt = DB.worldTime;
+    if (!window.DB?.worldTime) return;
+    const wt = window.DB.worldTime;
     const timeStr = `第${wt.year}年 ${wt.season} ${wt.month}月${wt.day}日 ${wt.period} ${String(wt.hour).padStart(2,'0')}:${String(wt.minute).padStart(2,'0')}`;
     const el = document.getElementById('gp-world-history-preview');
     if (el) el.innerText = timeStr;
@@ -97,174 +280,450 @@ function updateWorldTimeDisplay() {
 
 function updateWeatherDisplay() {
     const sel = document.getElementById('diy-weather');
-    if (sel) DB.weather = sel.value;
+    if (sel) window.DB.weather = sel.value;
     const icons = { "晴好": "☀️", "多云": "⛅", "阴天": "☁️", "小雨": "🌧️", "暴雨": "⛈️", "大雪": "❄️", "雾霾": "🌫️", "沙尘": "💨" };
     const chip = document.getElementById('topbar-weather-chip');
-    if (chip) chip.innerHTML = `${icons[DB.weather] || "🌤️"} ${DB.weather}`;
-    autoSaveGameState();
+    if (chip) chip.innerHTML = `${icons[window.DB.weather] || "🌤️"} ${window.DB.weather}`;
+    if (typeof window.autoSaveGameState === 'function') window.autoSaveGameState();
 }
 
 function updateFestivalDisplay() {
     const sel = document.getElementById('diy-festival');
     const customInput = document.getElementById('diy-festival-custom');
     if (sel) {
-        if (sel.value === "自定义节日" && customInput && customInput.value.trim()) { DB.festival = customInput.value.trim(); DB.festivalCustom = customInput.value.trim(); }
-        else if (sel.value !== "自定义节日") { DB.festival = sel.value; DB.festivalCustom = ""; }
+        if (sel.value === "自定义节日" && customInput && customInput.value.trim()) {
+            window.DB.festival = customInput.value.trim();
+            window.DB.festivalCustom = customInput.value.trim();
+        } else if (sel.value !== "自定义节日") {
+            window.DB.festival = sel.value;
+            window.DB.festivalCustom = "";
+        }
     }
     const fIcons = { "平日": "📅", "春节": "🧧", "中秋": "🌕", "七夕": "💫", "冬至": "❄️", "万圣节": "🎃", "圣诞节": "🎄" };
     const chip = document.getElementById('topbar-festival-chip');
-    if (chip) chip.innerHTML = `${fIcons[DB.festival] || "✨"} ${DB.festival}`;
-    autoSaveGameState();
+    if (chip) chip.innerHTML = `${fIcons[window.DB.festival] || "✨"} ${window.DB.festival}`;
+    if (typeof window.autoSaveGameState === 'function') window.autoSaveGameState();
 }
 
-function applyBubbleStyles() {
-    const root = document.documentElement;
-    root.style.setProperty('--bubble-self-bg', DB.bubbleStyles.selfBg);
-    root.style.setProperty('--bubble-self-color', DB.bubbleStyles.selfColor);
-    root.style.setProperty('--bubble-npc-bg', DB.bubbleStyles.npcBg);
-    root.style.setProperty('--bubble-npc-color', DB.bubbleStyles.npcColor);
+function advanceWorldTime(minutes) {
+    if (!window.DB?.worldTime) return;
+    window.DB.worldTime.minute += minutes;
+    while (window.DB.worldTime.minute >= 60) { window.DB.worldTime.minute -= 60; window.DB.worldTime.hour++; }
+    while (window.DB.worldTime.hour >= 24) { window.DB.worldTime.hour -= 24; window.DB.worldTime.day++; }
+    const daysInMonth = 30;
+    while (window.DB.worldTime.day > daysInMonth) { window.DB.worldTime.day -= daysInMonth; window.DB.worldTime.month++; }
+    const seasons = ["春季", "夏季", "秋季", "冬季"];
+    while (window.DB.worldTime.month > 12) { window.DB.worldTime.month -= 12; window.DB.worldTime.year++; }
+    const seasonIdx = Math.floor((window.DB.worldTime.month - 1) / 3);
+    window.DB.worldTime.season = seasons[Math.min(seasonIdx, 3)];
+    if (window.DB.worldTime.hour >= 5 && window.DB.worldTime.hour < 8) window.DB.worldTime.period = "清晨";
+    else if (window.DB.worldTime.hour >= 8 && window.DB.worldTime.hour < 12) window.DB.worldTime.period = "上午";
+    else if (window.DB.worldTime.hour >= 12 && window.DB.worldTime.hour < 14) window.DB.worldTime.period = "中午";
+    else if (window.DB.worldTime.hour >= 14 && window.DB.worldTime.hour < 18) window.DB.worldTime.period = "下午";
+    else if (window.DB.worldTime.hour >= 18 && window.DB.worldTime.hour < 21) window.DB.worldTime.period = "傍晚";
+    else if (window.DB.worldTime.hour >= 21 && window.DB.worldTime.hour < 24) window.DB.worldTime.period = "深夜";
+    else window.DB.worldTime.period = "凌晨";
+    updateWorldTimeDisplay();
+    if (typeof window.autoSaveGameState === 'function') window.autoSaveGameState();
 }
 
-function setFontScale(val, silent = false) {
-    DB.fontSize = Math.max(0.7, Math.min(1.5, val));
-    document.documentElement.style.setProperty('--font-scale', DB.fontSize);
-    document.getElementById('font-scale-display').innerText = DB.fontSize.toFixed(2);
-    localStorage.setItem("AI_WENYOU_FONT_SIZE", DB.fontSize);
-    if (!silent) showToast(`字体缩放已调整为 ${DB.fontSize.toFixed(2)}x`);
-}
+// ==================== 地图管理 ====================
+function renderYiCiYuanMap() {
+    const view = document.getElementById('yiciyuan-map-viewport');
+    if (!view) return;
+    applyMapBackgroundFromUrl();
+    view.querySelectorAll('.map-marker-dot, .map-marker-label').forEach(el => el.remove());
 
-function updateFoldThreshold(val) {
-    DB.historyFoldThreshold = parseInt(val);
-    document.getElementById('fold-threshold-display').innerText = val;
-    localStorage.setItem("AI_WENYOU_FOLD_THRESHOLD", val);
-}
-
-function toggleChoicesCollapse() {
-    const box = document.getElementById('story-choices-box');
-    if (box) {
-        box.classList.toggle('collapsed');
-        box.classList.toggle('expanded');
-    }
-}
-
-function setDifficulty(level) {
-    DB.difficulty = level;
-    localStorage.setItem("AI_WENYOU_DIFFICULTY", level);
-    let favorRate = 1.0, statRate = 1.0;
-    if (level === 'easy') { favorRate = 1.5; statRate = 1.3; }
-    else if (level === 'hard') { favorRate = 0.6; statRate = 0.7; }
-    const favorSpan = document.getElementById('favor-multiplier');
-    const statSpan = document.getElementById('stat-multiplier');
-    const descDiv = document.getElementById('difficulty-desc');
-    if (favorSpan) favorSpan.innerText = favorRate.toFixed(2);
-    if (statSpan) statSpan.innerText = statRate.toFixed(2);
-    if (descDiv) descDiv.innerHTML = level === 'easy' ? '简单：好感/属性增长更快' : (level === 'hard' ? '困难：好感/属性增长缓慢' : '普通：标准增长');
-}
-
-function saveGenerationParams() {
-    DB.genParams = {
-        storyLength: document.getElementById('story-length').value,
-        npcSpeechCount: parseInt(document.getElementById('npc-speech-count').value) || 1,
-        narrationCount: parseInt(document.getElementById('narration-count').value) || 1,
-        cardCount: parseInt(document.getElementById('card-count').value) || 0
-    };
-    localStorage.setItem("AI_WENYOU_GEN_PARAMS", JSON.stringify(DB.genParams));
-    showToast("剧情生成参数已保存");
-}
-
-function saveSystemPrompt() {
-    const prompt = document.getElementById('set-system-prompt').value;
-    if (DB.gameState) { DB.gameState.systemPrompt = prompt; autoSaveGameState(); }
-    showToast("系统提示词已保存");
-}
-
-function resetSystemPromptToDefault() {
-    if (!DB.gameState) return;
-    const world = DB.worlds.find(w => w.id === DB.gameState.worldId);
-    if (world && world.systemPrompt) {
-        DB.gameState.systemPrompt = world.systemPrompt;
-        document.getElementById('set-system-prompt').value = world.systemPrompt;
+    let locations = [];
+    if (window.DB?.currentMapId && window.DB.maps) {
+        const currentMap = window.DB.maps.find(m => m.id === window.DB.currentMapId);
+        if (currentMap && currentMap.locations) locations = currentMap.locations;
+        else locations = window.gameState?.gameState?.locations || [];
     } else {
-        DB.gameState.systemPrompt = "你是高自由度文字游戏推演主脑。对白使用【NPC名：对话】格式。每次给出3个高自由度选项。";
-        document.getElementById('set-system-prompt').value = DB.gameState.systemPrompt;
+        locations = window.gameState?.gameState?.locations || [];
     }
-    autoSaveGameState();
+    if (!locations.length) return;
+
+    locations.forEach(loc => {
+        if (loc.mapX === undefined || loc.mapY === undefined) {
+            loc.mapX = 20 + Math.random() * 60;
+            loc.mapY = 15 + Math.random() * 65;
+        }
+        const isHere = window.gameState?.gameState?.currentLocationId === loc.id;
+        const dot = document.createElement('div');
+        dot.className = `map-marker-dot ${isHere ? 'active-marker' : ''}`;
+        dot.style.left = loc.mapX + '%';
+        dot.style.top = loc.mapY + '%';
+        dot.innerHTML = `<i class="fas ${loc.thumbIcon || 'fa-monument'}"></i>`;
+        const label = document.createElement('div');
+        label.className = 'map-marker-label';
+        label.style.left = loc.mapX + '%';
+        label.style.top = loc.mapY + '%';
+        label.innerText = loc.name;
+        dot.onclick = (e) => { e.stopPropagation(); openLocationDetailModal(loc.id); };
+        view.appendChild(dot);
+        view.appendChild(label);
+    });
 }
 
-function applyStyleTemplate(styleKey) {
-    const templates = {
-        ancient: "你是高自由度古代皇朝文字养成推演叙事机。文字优雅古风。对白使用【NPC名：话语】格式。",
-        cyber: "你是不夜城底层边缘行者推进器。文字冷硬、霓虹错乱、科技感十足。对白使用【NPC名：话语】格式。",
-        fantasy: "你是西方魔幻史诗命运编织之神。文笔雄浑厚重。对白使用【NPC名：话语】格式",
-        dark: "你是克苏鲁黑暗调查员风格引路人。文字扭曲、绝望、不可名状。对白使用【NPC名：话语】格式。",
-        campus: "你是校园青春物语的温柔叙述者。文字清新明亮、充满少年感。对白使用【NPC名：话语】格式。",
-        xiuxian: "你是修仙世界的天道意志。文字飘逸出尘、意境深远。对白使用【NPC名：话语】格式。"
+function applyMapBackgroundFromUrl() {
+    const view = document.getElementById('yiciyuan-map-viewport');
+    const hint = document.getElementById('map-empty-hint');
+    if (window.DB?.mapBackgroundUrl) {
+        view.style.backgroundImage = `url('${window.DB.mapBackgroundUrl}')`;
+        view.style.backgroundColor = 'transparent';
+        if (hint) hint.style.display = 'none';
+    } else {
+        view.style.backgroundImage = '';
+        view.style.backgroundColor = 'var(--bg-tertiary)';
+        if (hint) hint.style.display = 'flex';
+    }
+}
+
+function uploadMapBackground(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            window.DB.mapBackgroundUrl = e.target.result;
+            localStorage.setItem("AI_WENYOU_MAP_BG", window.DB.mapBackgroundUrl);
+            applyMapBackgroundFromUrl();
+            renderYiCiYuanMap();
+            window.showToast?.("地图背景更新成功！");
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function clearMapBackground() {
+    window.DB.mapBackgroundUrl = "";
+    localStorage.removeItem("AI_WENYOU_MAP_BG");
+    applyMapBackgroundFromUrl();
+    renderYiCiYuanMap();
+    window.showToast?.("地图背景已清除。");
+}
+
+function handleMapBackgroundClick(event) {
+    if (!window.gameState?.gameState) return;
+    const view = document.getElementById('yiciyuan-map-viewport');
+    if (!window.DB.mapBackgroundUrl && view.style.backgroundImage === '') {
+        window.showToast?.("请先上传地图背景图！", false);
+        return;
+    }
+    const rect = view.getBoundingClientRect();
+    const xPercent = ((event.clientX - rect.left) / rect.width) * 100;
+    const yPercent = ((event.clientY - rect.top) / rect.height) * 100;
+    const clampedX = Math.max(5, Math.min(95, xPercent));
+    const clampedY = Math.max(5, Math.min(90, yPercent));
+    const name = prompt("在此坐标创建新地点，请输入名称：", "新探索点");
+    if (!name || !name.trim()) return;
+    const desc = prompt("地点描述（可选）：", "神秘未知之地") || "神秘未知之地";
+    const newLoc = {
+        id: "loc-mapclick-" + Date.now(),
+        name: name.trim(),
+        description: desc,
+        thumbIcon: 'fa-location-dot',
+        mapX: Math.round(clampedX),
+        mapY: Math.round(clampedY),
+        dangerLevel: 2,
+        infoLevel: 3
     };
-    const newPrompt = templates[styleKey] || templates.ancient;
-    document.getElementById('set-system-prompt').value = newPrompt;
-    if (DB.gameState) DB.gameState.systemPrompt = newPrompt;
-    showToast(`已装配「${styleKey}」文风流派提示词！`);
-    autoSaveGameState();
+    const currentMap = window.DB.maps?.find(m => m.id === window.DB.currentMapId);
+    if (currentMap) currentMap.locations.push(newLoc);
+    else window.gameState.gameState.locations.push(newLoc);
+    renderYiCiYuanMap();
+    if (typeof window.autoSaveGameState === 'function') window.autoSaveGameState();
+    window.showToast?.(`已在地图创建「${name.trim()}」`);
 }
 
-function saveInlineComponentPromptOnly() {
-    const raw = document.getElementById('diy-inline-component-prompt').value.trim();
-    DB.inlineComponentPrompt = raw;
-    localStorage.setItem("AI_WENYOU_INLINE_PROMPT", raw);
-    showToast("内联组件提示词已保存");
+function manuallyAddLocation() {
+    const name = document.getElementById('new-loc-name')?.value.trim();
+    if (!name) { window.showToast?.("地点名不能为空！", false); return; }
+    const desc = document.getElementById('new-loc-desc')?.value.trim() || "全自由沙盒自主确立的地缘点。";
+    const newLocation = {
+        id: "loc-diy-"+Date.now(),
+        name: name,
+        description: desc,
+        thumbIcon: 'fa-location-dot',
+        mapX: 50,
+        mapY: 50,
+        dangerLevel: 2,
+        infoLevel: 3
+    };
+    const currentMap = window.DB.maps?.find(m => m.id === window.DB.currentMapId);
+    if (currentMap) currentMap.locations.push(newLocation);
+    else window.gameState.gameState.locations.push(newLocation);
+    document.getElementById('new-loc-name').value = '';
+    document.getElementById('new-loc-desc').value = '';
+    renderYiCiYuanMap();
+    if (typeof window.autoSaveGameState === 'function') window.autoSaveGameState();
+    window.showToast?.(`成功增筑场景：${name}`);
 }
 
-async function saveInlineComponentPromptAndPolish() {
-    const rawPrompt = document.getElementById('diy-inline-component-prompt').value.trim();
-    DB.inlineComponentPrompt = rawPrompt;
-    localStorage.setItem("AI_WENYOU_INLINE_PROMPT", DB.inlineComponentPrompt);
-    if (rawPrompt && DB.apiConfig.key) {
-        showToast("正在委托AI润色并吸收提示词...");
-        try {
-            const polished = await callLLMRequest(`请对以下用于文字游戏的内联组件提示词进行润色优化...\n原始提示词：${rawPrompt}`, "你是提示词优化专家。");
-            DB.inlineComponentPrompt = polished.trim();
-            document.getElementById('diy-inline-component-prompt').value = DB.inlineComponentPrompt;
-            localStorage.setItem("AI_WENYOU_INLINE_PROMPT", DB.inlineComponentPrompt);
-            showToast("AI已润色并保存！");
-        } catch(err) { showToast("润色失败，已保存原版。", false); }
-    } else { showToast("未配置API密钥，仅保存原版。"); }
+async function aiGenerateRandomLocation() {
+    window.showToast?.("正委托AI开拓未知场景...");
+    const prompt = `请结合当前世界设定「${window.gameState.gameState.worldName}」，创造一个新地缘场景。输出纯JSON：{"name":"场景名","description":"细腻百字阐述"}`;
+    try {
+        const res = await window.callLLMRequest?.(prompt, "你是纯净JSON生成模组。");
+        if (!res) throw new Error("AI未返回");
+        const parsed = JSON.parse(window.cleanAiJsonOutput?.(res) || res);
+        const newLocation = {
+            id: "loc-ai-"+Date.now(),
+            name: parsed.name,
+            description: parsed.description,
+            thumbIcon: 'fa-location-dot',
+            mapX: 15+Math.random()*70,
+            mapY: 15+Math.random()*70,
+            dangerLevel: Math.floor(Math.random()*3)+2,
+            infoLevel: Math.floor(Math.random()*3)+2
+        };
+        const currentMap = window.DB.maps?.find(m => m.id === window.DB.currentMapId);
+        if (currentMap) currentMap.locations.push(newLocation);
+        else window.gameState.gameState.locations.push(newLocation);
+        renderYiCiYuanMap();
+        if (typeof window.autoSaveGameState === 'function') window.autoSaveGameState();
+        window.showToast?.(`AI成功拓展：${parsed.name}`);
+    } catch (err) { window.showToast?.("AI地缘开垦出现扰动。", false); }
 }
 
-function setRawPromptMode() {
-    const input = document.getElementById('story-custom-input');
-    input.value = "[指令：请直接输出结果，无需任何润色、修饰或额外的文学加工。]\n" + input.value;
-    showToast("已设为：不润色模式");
+function quickMoveAllNpcsToCurrentLocation() {
+    if (!window.gameState?.gameState?.currentLocationId) { window.showToast?.("请先进入场景！", false); return; }
+    const locId = window.gameState.gameState.currentLocationId;
+    let count = 0;
+    window.gameState.gameState.npcs.forEach(npc => {
+        if (npc.jcl && npc.jcl.location !== locId) { npc.jcl.location = locId; count++; }
+    });
+    renderYiCiYuanMap();
+    if (typeof window.autoSaveGameState === 'function') window.autoSaveGameState();
+    window.showToast?.(`已将 ${count} 位NPC召唤至「${window.gameState.gameState.currentLocationName}」！`);
 }
 
-function saveGlobalNpcLogicPrompt() {
-    const val = document.getElementById('global-npc-logic-prompt').value.trim();
-    if (val) DB.globalNpcLogicPrompt = val;
-    localStorage.setItem("AI_WENYOU_GLOBAL_NPC_LOGIC", DB.globalNpcLogicPrompt);
-    showToast("全局NPC逻辑提示词已保存");
+function switchMap(mapId) {
+    const targetMap = window.DB.maps?.find(m => m.id === mapId);
+    if (!targetMap) return;
+    window.DB.currentMapId = mapId;
+    window.DB.mapBackgroundUrl = targetMap.bgUrl;
+    window.gameState.gameState.locations = targetMap.locations;
+    applyMapBackgroundFromUrl();
+    renderYiCiYuanMap();
+    if (typeof window.autoSaveGameState === 'function') window.autoSaveGameState();
 }
 
-function saveAiHelpPrompt() {
-    const promptValue = document.getElementById('ai-help-prompt-setting').value.trim();
-    if (!promptValue) { showToast("提示词不能为空", false); return; }
-    localStorage.setItem("AI_WENYOU_HELP_PROMPT", promptValue);
-    showToast("AI帮写提示词已保存！");
+function createNewMap() {
+    const name = prompt("请输入新地图名称：", "新大陆");
+    if (!name) return;
+    const newMapId = "map_" + Date.now();
+    if (!window.DB.maps) window.DB.maps = [];
+    window.DB.maps.push({
+        id: newMapId,
+        name: name,
+        bgUrl: "",
+        locations: []
+    });
+    const selector = document.getElementById('map-selector');
+    if (selector) {
+        const option = document.createElement('option');
+        option.value = newMapId;
+        option.textContent = name;
+        selector.appendChild(option);
+    }
+    switchMap(newMapId);
 }
 
-function loadUserCorePrompt() {
-    const saved = localStorage.getItem("AI_WENYOU_CORE_PROMPT");
-    if (saved && saved.trim()) document.getElementById('user-core-prompt').value = saved;
-    else document.getElementById('user-core-prompt').value = "你是一个高自由度文字游戏的主控AI...";
+// ==================== 地点详情模态框 ====================
+async function openLocationDetailModal(locationId) {
+    const loc = getLocationById(locationId);
+    if (!loc) return;
+    window.DB.pendingLocationDetailId = locationId;
+
+    // 刷新 NPC 活动（可选）
+    if (typeof window.refreshNpcActivityForLocation === 'function') {
+        await window.refreshNpcActivityForLocation(locationId);
+    }
+
+    const nameEl = document.getElementById('loc-detail-name');
+    const descEl = document.getElementById('loc-detail-desc');
+    const dangerEl = document.getElementById('loc-detail-danger');
+    const dangerDescEl = document.getElementById('loc-detail-danger-desc');
+    const infoEl = document.getElementById('loc-detail-info');
+    const infoDescEl = document.getElementById('loc-detail-info-desc');
+    const gotoBtn = document.getElementById('loc-detail-goto-btn');
+    const npcContainer = document.getElementById('loc-detail-npcs');
+
+    if (nameEl) nameEl.innerText = loc.name;
+    if (descEl) descEl.innerText = loc.description || '暂无描述';
+    const dangerLevel = loc.dangerLevel || 2;
+    const infoLevel = loc.infoLevel || 3;
+    const dangerTexts = ["极低", "低", "中", "高", "极高"];
+    if (dangerEl) dangerEl.innerText = dangerTexts[Math.min(dangerLevel-1,4)] || "未知";
+    if (dangerDescEl) dangerDescEl.innerText = `${dangerLevel}/5`;
+    const resourceTexts = ["贫瘠", "稀少", "普通", "丰富", "极丰"];
+    if (infoEl) infoEl.innerText = resourceTexts[Math.min(infoLevel-1,4)] || "未知";
+    if (infoDescEl) infoDescEl.innerText = `${infoLevel}/5`;
+
+    const isHere = window.gameState.gameState.currentLocationId === locationId;
+    if (gotoBtn) {
+        if (isHere) {
+            gotoBtn.innerText = '📍 您已在此地';
+            gotoBtn.style.opacity = '0.6';
+            gotoBtn.onclick = () => window.showToast?.("您已在此场景区域。");
+        } else {
+            gotoBtn.innerText = '🚀 前往此地';
+            gotoBtn.style.opacity = '1';
+            gotoBtn.onclick = travelToLocationFromDetail;
+        }
+    }
+
+    const npcsHere = getNpcsAtLocation(locationId);
+    if (npcContainer) {
+        npcContainer.innerHTML = '';
+        if (npcsHere.length === 0) {
+            npcContainer.innerHTML = `<p class="text-xs text-center py-3">此地暂无NPC出没</p>`;
+        } else {
+            npcsHere.forEach((n, i) => {
+                const realIdx = window.gameState.gameState.npcs.indexOf(n);
+                const activity = n.currentActivity || n.jcl?.currentActivity || "正在四处走动";
+                const chip = document.createElement('div');
+                chip.className = "flex items-center justify-between border rounded-lg p-2.5 transition";
+                chip.innerHTML = `<div class="flex items-center gap-2 min-w-0 flex-1"><div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">${n.portrait ? `<img src="${n.portrait}" class="w-full h-full object-cover">` : '<i class="fas fa-user text-xs"></i>'}</div><div class="min-w-0"><span class="text-xs font-bold truncate block">${n.name}</span><span class="text-xs">${n.relation}</span><div class="text-[9px] italic">💬 ${activity}</div></div></div><div class="flex gap-1.5 flex-shrink-0"><button onclick="acquaintNpcFromLocation(${realIdx})" class="border text-[10px] px-2 py-1 rounded">认识</button><button onclick="openNpcInteractiveDetails(${realIdx})" class="border text-[10px] px-2 py-1 rounded">详情</button></div>`;
+                npcContainer.appendChild(chip);
+            });
+        }
+    }
+
+    const modal = document.getElementById('modal-location-detail');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
+    }
 }
 
-function saveUserCorePrompt() {
-    const val = document.getElementById('user-core-prompt').value.trim();
-    if (val) localStorage.setItem("AI_WENYOU_CORE_PROMPT", val);
-    showToast("核心指令已保存");
+function closeLocationDetailModal() {
+    const modal = document.getElementById('modal-location-detail');
+    if (modal) modal.style.display = 'none';
+    window.DB.pendingLocationDetailId = null;
 }
 
-function resetUserCorePrompt() {
-    const defaultPrompt = "你是一个高自由度文字游戏的主控AI，负责驱动整个世界的运转。请始终遵循以下全局规则：1. 保持世界观一致性；2. NPC行为符合自身设定；3. 剧情发展有因果逻辑。";
-    document.getElementById('user-core-prompt').value = defaultPrompt;
-    localStorage.removeItem("AI_WENYOU_CORE_PROMPT");
-    showToast("已恢复默认核心指令");
+function travelToLocationFromDetail() {
+    const locId = window.DB.pendingLocationDetailId;
+    closeLocationDetailModal();
+    if (locId && typeof window.handleMoveToLocationNodeById === 'function') {
+        window.handleMoveToLocationNodeById(locId);
+    }
+}
+
+function acquaintNpcFromLocation(idx) {
+    const npc = window.gameState.gameState.npcs[idx];
+    if (npc.relation === "陌生人" || npc.relation === "萍水相逢" || npc.relation.includes("陌生")) {
+        npc.relation = "初识之缘";
+        window.showToast?.(`你认识了「${npc.name}」，关系变为「初识之缘」`);
+    } else {
+        window.showToast?.(`你与「${npc.name}」已经相识（${npc.relation}）`);
+    }
+    if (typeof window.autoSaveGameState === 'function') window.autoSaveGameState();
+    if (window.DB.pendingLocationDetailId) openLocationDetailModal(window.DB.pendingLocationDetailId);
+    if (typeof window.renderNpcCards === 'function') window.renderNpcCards();
+}
+
+// ==================== NPC 相关 ====================
+function openNpcInteractiveDetails(idx) {
+    // 此函数将在 ui.js 中实现具体模态框渲染，这里提供占位
+    console.log("openNpcInteractiveDetails", idx);
+    // 实际实现会调用 window.renderNpcInteractiveModal
+}
+
+function deleteNpc(idx) {
+    const npc = window.gameState.gameState?.npcs[idx];
+    if (!npc) return;
+    if (confirm(`确定要删除「${npc.name}」吗？`)) {
+        if (!window.DB.deletedNpcs) window.DB.deletedNpcs = [];
+        window.DB.deletedNpcs.push(JSON.parse(JSON.stringify(npc)));
+        window.gameState.gameState.npcs.splice(idx, 1);
+        if (typeof window.renderNpcCards === 'function') window.renderNpcCards();
+        if (typeof window.renderYiCiYuanMap === 'function') window.renderYiCiYuanMap();
+        if (typeof window.autoSaveGameState === 'function') window.autoSaveGameState();
+        window.showToast?.(`「${npc.name}」已从世界中移除，可在个人面板恢复。`);
+    }
+}
+
+function restoreNpc(deletedIndex) {
+    const npcData = window.DB.deletedNpcs?.[deletedIndex];
+    if (!npcData) return;
+    npcData.id = "npc-restored-" + Date.now() + "-" + Math.random();
+    if (window.gameState.gameState?.currentLocationId) {
+        if (!npcData.jcl) npcData.jcl = {};
+        npcData.jcl.location = window.gameState.gameState.currentLocationId;
+    }
+    window.gameState.gameState.npcs.push(npcData);
+    window.DB.deletedNpcs.splice(deletedIndex, 1);
+    if (typeof window.renderNpcCards === 'function') window.renderNpcCards();
+    if (typeof window.renderYiCiYuanMap === 'function') window.renderYiCiYuanMap();
+    if (typeof window.autoSaveGameState === 'function') window.autoSaveGameState();
+    window.showToast?.(`「${npcData.name}」已重新回到世界。`);
+}
+
+function refreshDeletedNpcPanel() {
+    const container = document.getElementById('deleted-npcs-list');
+    if (!container) return;
+    if (!window.DB.deletedNpcs || window.DB.deletedNpcs.length === 0) {
+        container.innerHTML = '<div class="text-center py-2">暂无已删除的 NPC</div>';
+        return;
+    }
+    container.innerHTML = '';
+    window.DB.deletedNpcs.forEach((npc, idx) => {
+        const item = document.createElement('div');
+        item.className = "flex items-center justify-between border-b pb-1 mb-1";
+        item.innerHTML = `<div class="flex items-center gap-2"><span class="font-bold text-xs">${npc.name}</span><span class="text-[10px]">${npc.relation}</span></div><button onclick="restoreNpc(${idx})" class="text-[10px] border px-2 py-0.5 rounded"><i class="fas fa-undo-alt"></i>恢复</button>`;
+        container.appendChild(item);
+    });
+}
+
+function clearAllDeletedNpcs() {
+    if (!window.DB.deletedNpcs || window.DB.deletedNpcs.length === 0) {
+        window.showToast?.("当前没有已删除的NPC记录", false);
+        return;
+    }
+    if (confirm(`确定清空所有 ${window.DB.deletedNpcs.length} 个已删除的NPC记录吗？`)) {
+        window.DB.deletedNpcs = [];
+        if (typeof window.autoSaveGameState === 'function') window.autoSaveGameState();
+        refreshDeletedNpcPanel();
+        window.showToast?.("已清空所有已删除的NPC记录");
+    }
+}
+
+// ==================== 挂载到全局 ====================
+if (typeof window !== 'undefined') {
+    window.resetGameMemory = resetGameMemory;
+    window.ensureRelationshipNetworkInitialized = ensureRelationshipNetworkInitialized;
+    window.detectPalaceMode = detectPalaceMode;
+    window.clearAutoSave = clearAutoSave;
+    window.launchWorldEngine = launchWorldEngine;
+    window.exitWorldToLobby = exitWorldToLobby;
+    window.restartCurrentGame = restartCurrentGame;
+    window.getLocationById = getLocationById;
+    window.getNpcsAtLocation = getNpcsAtLocation;
+    window.updateGameplayHeaderLocation = updateGameplayHeaderLocation;
+    window.checkAutoSavedGame = checkAutoSavedGame;
+    window.triggerInitialAILogic = triggerInitialAILogic;
+    window.updateWorldTimeDisplay = updateWorldTimeDisplay;
+    window.updateWeatherDisplay = updateWeatherDisplay;
+    window.updateFestivalDisplay = updateFestivalDisplay;
+    window.advanceWorldTime = advanceWorldTime;
+    window.renderYiCiYuanMap = renderYiCiYuanMap;
+    window.applyMapBackgroundFromUrl = applyMapBackgroundFromUrl;
+    window.uploadMapBackground = uploadMapBackground;
+    window.clearMapBackground = clearMapBackground;
+    window.handleMapBackgroundClick = handleMapBackgroundClick;
+    window.manuallyAddLocation = manuallyAddLocation;
+    window.aiGenerateRandomLocation = aiGenerateRandomLocation;
+    window.quickMoveAllNpcsToCurrentLocation = quickMoveAllNpcsToCurrentLocation;
+    window.switchMap = switchMap;
+    window.createNewMap = createNewMap;
+    window.openLocationDetailModal = openLocationDetailModal;
+    window.closeLocationDetailModal = closeLocationDetailModal;
+    window.travelToLocationFromDetail = travelToLocationFromDetail;
+    window.acquaintNpcFromLocation = acquaintNpcFromLocation;
+    window.deleteNpc = deleteNpc;
+    window.restoreNpc = restoreNpc;
+    window.refreshDeletedNpcPanel = refreshDeletedNpcPanel;
+    window.clearAllDeletedNpcs = clearAllDeletedNpcs;
 }
