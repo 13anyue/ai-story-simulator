@@ -3,269 +3,285 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>AI世界书 · 杂志风格文游引擎</title>
-    <!-- 字体与图标 -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <title>AI 世界书 · 杂志叙事引擎</title>
+    <!-- 字体与图标库 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- 外部依赖（文档解析） -->
+    <!-- 文档导入辅助库 (可选, 用于保持原功能) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <!-- 全局通知与加载组件 -->
     <div id="toast-container" class="toast-container"></div>
     <div id="global-loader" class="global-loader">
         <div class="loader-spinner"></div>
-        <p>AI 思考中...</p>
+        <p>AI 正在编织故事...</p>
     </div>
     <div id="global-bg-layer"></div>
 
     <div id="app-root">
-        <!-- ========== 大厅首页（杂志风） ========== -->
+        <!-- ========== 大厅首页 · 杂志风格 ========== -->
         <div id="screen-lobby" class="screen-view active">
-            <div class="magazine-hero">
-                <div class="brand">
+            <div class="magazine-header">
+                <div class="brand-group">
                     <h1 class="magazine-title">AI 世界书</h1>
-                    <p class="magazine-subtitle">文游创世引擎 · 高自由度交互剧场</p>
+                    <p class="magazine-eyebrow">沉浸式叙事实验室</p>
                 </div>
-                <div class="hero-actions">
-                    <button class="icon-btn" onclick="openUserManager()" title="个人中心"><i class="fas fa-user-astronaut"></i></button>
-                    <button class="icon-btn" onclick="switchScreen('screen-api-config')" title="API设置"><i class="fas fa-sliders-h"></i></button>
+                <div class="action-group">
+                    <button class="icon-btn ghost" onclick="openUserManager()" aria-label="个人档案"><i class="fa-regular fa-user"></i></button>
+                    <button class="icon-btn ghost" onclick="switchScreen('screen-api-config')" aria-label="模型设置"><i class="fa-regular fa-sliders"></i></button>
                 </div>
             </div>
 
-            <div id="lobby-resume-banner" class="resume-card hidden" onclick="resumeLastGame()">
-                <i class="fas fa-play-circle"></i>
-                <div><span class="label">继续上次进度</span><span id="resume-world-name" class="world-name"></span></div>
+            <!-- 继续游戏横幅 -->
+            <div id="lobby-resume-banner" class="resume-banner hidden" onclick="resumeLastGame()">
+                <i class="fa-regular fa-circle-play"></i>
+                <div class="resume-info">
+                    <span class="label">继续旅程</span>
+                    <span id="resume-world-name" class="world-name">——</span>
+                </div>
+                <i class="fa-regular fa-arrow-right"></i>
             </div>
 
-            <div class="magazine-card">
-                <div class="card-header"><i class="fas fa-globe-asia"></i> 选择剧本世界 <span id="world-count-badge" class="badge-light">0 个可用</span></div>
-                <div id="lobby-world-list" class="world-list"></div>
+            <!-- 世界选集 · 杂志网格 -->
+            <div class="magazine-section">
+                <div class="section-head">
+                    <span><i class="fa-regular fa-compass"></i> 精选世界</span>
+                    <span id="world-count-badge" class="badge-count">0 世界</span>
+                </div>
+                <div id="lobby-world-list" class="world-grid"></div>
             </div>
 
-            <div class="magazine-card">
-                <div class="card-header"><i class="fas fa-wand-magic-sparkles"></i> 孕育新世界</div>
-                <div class="button-group">
-                    <button onclick="openWorldCreatorModal()" class="btn-outline"><i class="fas fa-feather-pointed"></i> 手写设定生成</button>
-                    <button onclick="document.getElementById('world-file-uploader').click()" class="btn-primary"><i class="fas fa-file-import"></i> 导入文件创世</button>
+            <!-- 创世工坊 -->
+            <div class="magazine-section">
+                <div class="section-head">
+                    <span><i class="fa-regular fa-wand-magic"></i> 创世工坊</span>
+                    <span class="hint-text">导入 / 手写</span>
+                </div>
+                <div class="creation-actions">
+                    <button onclick="openWorldCreatorModal()" class="btn-outline"><i class="fa-regular fa-feather"></i> 手写设定</button>
+                    <button onclick="document.getElementById('world-file-uploader').click()" class="btn-primary"><i class="fa-regular fa-file-import"></i> 导入文件</button>
                     <input type="file" id="world-file-uploader" class="hidden" accept=".txt,.md,.docx,.doc,.pdf" onchange="handleWorldFileImport(this)">
                 </div>
             </div>
 
-            <div class="magazine-card collapsible">
-                <div class="card-header cursor-pointer" onclick="toggleSection('appearance-panel')">
-                    <i class="fas fa-palette"></i> 界面主题 DIY
-                    <i id="appearance-arrow" class="fas fa-chevron-down ml-auto"></i>
-                </div>
-                <div id="appearance-panel" class="collapsible-content hidden">
-                    <!-- 动态填充 JS 会注入控件，也可预先写好，为简洁留空 -->
-                </div>
+            <!-- 快速存档读取 -->
+            <div class="magazine-section">
+                <div class="section-head"><span><i class="fa-regular fa-clock"></i> 历史印记</span></div>
+                <div id="lobby-save-list" class="save-strip"></div>
             </div>
 
-            <div class="magazine-card">
-                <div class="card-header"><i class="fas fa-box-archive"></i> 快速读取历史进度</div>
-                <div id="lobby-save-list" class="save-list"></div>
+            <!-- 界面主题自定义入口 -->
+            <div class="magazine-section">
+                <div class="section-head cursor-pointer" onclick="toggleSection('appearance-panel')">
+                    <span><i class="fa-regular fa-palette"></i> 杂志风格实验室</span>
+                    <i id="appearance-arrow" class="fa-regular fa-chevron-down"></i>
+                </div>
+                <div id="appearance-panel" class="collapsible-panel hidden">
+                    <!-- 动态由js填充控件 -->
+                </div>
             </div>
         </div>
 
         <!-- ========== API 配置页 ========== -->
         <div id="screen-api-config" class="screen-view hidden">
             <div class="page-header">
-                <button onclick="switchScreen('screen-lobby')" class="back-btn"><i class="fas fa-arrow-left"></i></button>
-                <h2>大模型 API 配置中心</h2>
+                <button onclick="switchScreen('screen-lobby')" class="back-btn"><i class="fa-regular fa-arrow-left"></i></button>
+                <h2>模型接口配置</h2>
             </div>
-            <div class="api-form">
-                <label>API 请求端点</label>
+            <div class="api-card">
+                <label>API 端点</label>
                 <input type="text" id="cfg-endpoint" placeholder="https://api.openai.com/v1">
-                <label>API 访问密钥</label>
+                <label>密钥</label>
                 <input type="password" id="cfg-key" placeholder="sk-...">
-                <label>自定义大模型名称</label>
+                <label>模型名称</label>
                 <input type="text" id="cfg-model" placeholder="gpt-4o-mini">
                 <div class="button-group">
-                    <button onclick="fetchAvailableModels()" class="btn-secondary"><i class="fas fa-cloud-arrow-down"></i> 拉取可用列表</button>
-                    <button onclick="testAPIConnection()" class="btn-primary"><i class="fas fa-vial"></i> 测试连通性</button>
+                    <button onclick="fetchAvailableModels()" class="btn-secondary"><i class="fa-regular fa-cloud"></i> 拉取模型</button>
+                    <button onclick="testAPIConnection()" class="btn-primary"><i class="fa-regular fa-vial"></i> 测试连通</button>
                 </div>
                 <div id="model-list-box" class="model-list hidden"></div>
+                <button onclick="saveAPIConfigAndBack()" class="btn-primary full-width mt-3">保存并返回大厅</button>
             </div>
-            <button onclick="saveAPIConfigAndBack()" class="btn-primary full-width">保存配置并返回大厅</button>
         </div>
 
         <!-- ========== 游戏主界面 ========== -->
         <div id="screen-gameplay" class="screen-view hidden">
+            <!-- 顶栏 · 杂志气象标 -->
             <div class="game-top-bar">
                 <div class="game-info">
-                    <h3 id="gp-world-title">—</h3>
-                    <span id="gp-location-badge" class="badge-location">位置: 未知</span>
-                    <span id="topbar-weather-chip" class="weather-chip">☀️ 晴好</span>
-                    <span id="topbar-festival-chip" class="festival-chip">📅 平日</span>
-                    <button onclick="toggleRumorPanel()" class="icon-sm"><i class="fas fa-newspaper"></i></button>
-                    <button id="scroll-to-bottom-btn" class="icon-sm"><i class="fas fa-arrow-down"></i></button>
+                    <h3 id="gp-world-title">无名史诗</h3>
+                    <span id="gp-location-badge" class="location-chip"><i class="fa-regular fa-location-dot"></i> 未知之地</span>
+                    <span id="topbar-weather-chip" class="weather-chip"><i class="fa-regular fa-sun"></i> 晴朗</span>
+                    <span id="topbar-festival-chip" class="festival-chip"><i class="fa-regular fa-calendar"></i> 平日</span>
                 </div>
                 <div class="game-actions">
                     <button onclick="toggleDayNight()" class="daynight-toggle"><span class="toggle-knob"></span></button>
-                    <button onclick="saveEverything()" class="icon-sm"><i class="fas fa-save"></i></button>
-                    <button onclick="restartCurrentGame()" class="icon-sm text-red"><i class="fas fa-power-off"></i></button>
-                    <button onclick="exitWorldToLobby()" class="icon-sm"><i class="fas fa-right-from-bracket"></i></button>
+                    <button onclick="saveEverything()" class="icon-btn ghost"><i class="fa-regular fa-floppy-disk"></i></button>
+                    <button onclick="restartCurrentGame()" class="icon-btn ghost"><i class="fa-regular fa-rotate-right"></i></button>
+                    <button onclick="exitWorldToLobby()" class="icon-btn ghost"><i class="fa-regular fa-door-open"></i></button>
                 </div>
             </div>
 
+            <!-- 子视图容器 (故事/地图/属性/NPC/世界书/论坛/设置) -->
             <div id="game-subview-container" class="subview-container">
-                <!-- 剧情视图 -->
+                <!-- 剧情视图 · 杂志专栏 -->
                 <div id="subview-story" class="subview-panel hidden">
-                    <div class="story-header">
-                        <span><i class="fas fa-history"></i> 剧情回合 · <span id="story-round-counter">0</span></span>
-                        <span>📜 长按文字可编辑/删除/撤回</span>
+                    <div class="story-header-bar">
+                        <span><i class="fa-regular fa-feather"></i> 叙事回合 · <span id="story-round-counter">0</span></span>
+                        <button onclick="toggleRumorPanel()" class="text-btn"><i class="fa-regular fa-newspaper"></i> 传闻</button>
+                        <button id="scroll-to-bottom-btn" class="text-btn"><i class="fa-regular fa-arrow-down"></i> 底端</button>
                     </div>
-                    <div id="rumor-panel" class="rumor-banner hidden"><i class="fas fa-bullhorn"></i><span id="rumor-text">暂无传闻</span></div>
+                    <div id="rumor-panel" class="rumor-banner hidden"><i class="fa-regular fa-bullhorn"></i> <span id="rumor-text">暂无传闻</span></div>
                     <div id="story-terminal" class="story-terminal"></div>
                     <div class="story-control-panel">
-                        <div id="choices-wrapper"><div id="story-choices-box" class="choices-box collapsed"></div></div>
+                        <div id="choices-wrapper">
+                            <div id="story-choices-box" class="choices-box collapsed"></div>
+                        </div>
                         <div class="control-row">
-                            <button onclick="toggleChoicesCollapse()" class="btn-small">选项</button>
-                            <button onclick="submitAiHelpWrite()" class="btn-small accent">AI帮写</button>
+                            <button onclick="toggleChoicesCollapse()" class="btn-small">选项面板</button>
+                            <button onclick="submitAiHelpWrite()" class="btn-small accent">✍️ AI 帮写</button>
                         </div>
                         <div class="input-row">
-                            <i class="fas fa-keyboard"></i>
-                            <input type="text" id="story-custom-input" placeholder="自由行动...">
+                            <i class="fa-regular fa-keyboard"></i>
+                            <input type="text" id="story-custom-input" placeholder="自由行动 / 对话 ...">
                             <button onclick="submitCustomAction()" class="btn-primary">执行</button>
                             <div class="relative">
-                                <button onclick="toggleStoryMoreMenu()" class="icon-sm"><i class="fas fa-ellipsis-h"></i></button>
+                                <button onclick="toggleStoryMoreMenu()" class="icon-btn small"><i class="fa-regular fa-ellipsis"></i></button>
                                 <div id="story-more-menu" class="dropdown-menu hidden">
                                     <button onclick="triggerContinueStory()">续写</button>
-                                    <button onclick="triggerRewriteCurrent()">重写</button>
-                                    <button onclick="triggerHistoryRollback()">回溯</button>
+                                    <button onclick="triggerRewriteCurrent()">重写此段</button>
+                                    <button onclick="triggerHistoryRollback()">回溯剧情</button>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 地图视图 -->
+                <!-- 地图视图 · 地理志 -->
                 <div id="subview-map" class="subview-panel hidden">
                     <div class="map-header">
-                        <h2><i class="fas fa-map"></i> 大世界探索</h2>
-                        <div><select id="map-selector"></select><button onclick="createNewMap()" class="btn-small">+ 新建</button></div>
+                        <h4><i class="fa-regular fa-map"></i> 舆图纪略</h4>
+                        <div><select id="map-selector"></select><button onclick="createNewMap()" class="btn-small">+ 新图</button></div>
                     </div>
                     <div class="map-bg-controls">
-                        <label class="file-label-sm"><i class="fas fa-upload"></i> 上传底图<input type="file" id="map-bg-uploader" class="hidden" accept="image/*" onchange="uploadMapBackground(this)"></label>
+                        <label class="file-label-sm"><i class="fa-regular fa-image"></i> 上传底图<input type="file" id="map-bg-uploader" class="hidden" accept="image/*" onchange="uploadMapBackground(this)"></label>
                         <button onclick="clearMapBackground()" class="btn-small">清除底图</button>
                     </div>
-                    <div id="yiciyuan-map-viewport" class="explore-map-container" onclick="handleMapBackgroundClick(event)">
-                        <div id="map-empty-hint" class="map-empty-hint"><i class="fas fa-image"></i><span>上传背景图后，点击此处安放地标</span></div>
+                    <div id="yiciyuan-map-viewport" class="explore-map-container">
+                        <div id="map-empty-hint" class="map-empty-hint"><i class="fa-regular fa-map-location-dot"></i><span>点击画布添加地标，或AI生成</span></div>
                     </div>
                     <div class="location-form">
-                        <input type="text" id="new-loc-name" placeholder="地点名称">
-                        <input type="text" id="new-loc-desc" placeholder="资源描述">
-                        <button onclick="manuallyAddLocation()" class="btn-secondary">手动确立</button>
-                        <button onclick="aiGenerateRandomLocation()" class="btn-primary">✨ AI 智能衍生</button>
-                        <button onclick="quickMoveAllNpcsToCurrentLocation()" class="btn-outline full-width"><i class="fas fa-users-rays"></i> 汇聚所有NPC</button>
+                        <input type="text" id="new-loc-name" placeholder="地名">
+                        <input type="text" id="new-loc-desc" placeholder="描述/资源">
+                        <div class="button-group">
+                            <button onclick="manuallyAddLocation()" class="btn-secondary">标记地点</button>
+                            <button onclick="aiGenerateRandomLocation()" class="btn-primary">✨ AI 衍生</button>
+                        </div>
+                        <button onclick="quickMoveAllNpcsToCurrentLocation()" class="btn-outline full-width"><i class="fa-regular fa-people-arrows"></i> 召集NPC至此</button>
                     </div>
                 </div>
 
-                <!-- 个人资料视图 -->
+                <!-- 个人志 · 属性日志 -->
                 <div id="subview-stats" class="subview-panel hidden">
                     <div class="player-card">
-                        <div class="player-card-header"></div>
-                        <div class="player-card-body">
-                            <div class="player-avatar" onclick="openPlayerQuickAvatarUpload()">
-                                <div id="player-avatar-preview"></div>
-                                <i class="fas fa-camera"></i>
-                                <input type="file" id="player-avatar-upload" class="hidden" accept="image/*" onchange="handlePlayerAvatarUpload(this)">
-                            </div>
-                            <div class="player-info">
-                                <input type="text" id="player-config-name" onchange="updatePlayerCoreName(this.value)" value="我">
-                                <span id="player-identity-title">天选编织者</span>
-                                <button onclick="openPlayerSettingModal()" class="icon-sm"><i class="fas fa-pen-nib"></i></button>
-                            </div>
-                            <div id="player-setting-preview" class="player-setting-preview"></div>
+                        <div class="player-avatar" onclick="openPlayerQuickAvatarUpload()">
+                            <div id="player-avatar-preview"></div>
+                            <i class="fa-regular fa-camera"></i>
+                            <input type="file" id="player-avatar-upload" class="hidden" accept="image/*" onchange="handlePlayerAvatarUpload(this)">
+                        </div>
+                        <div class="player-core">
+                            <input type="text" id="player-config-name" onchange="updatePlayerCoreName(this.value)" value="旅人">
+                            <span id="player-identity-title">叙事主角</span>
+                            <button onclick="openPlayerSettingModal()" class="icon-btn ghost"><i class="fa-regular fa-pen"></i></button>
                         </div>
                     </div>
                     <div class="cheat-bar">
-                        <span><i class="fas fa-wand-sparkles"></i> 金手指</span>
+                        <span><i class="fa-regular fa-wand-sparkles"></i> 叙事杠杆</span>
                         <label class="switch"><input type="checkbox" id="cheat-toggle" onchange="toggleCheatMode()"><span class="slider"></span></label>
                         <span id="cheat-status-text">关闭</span>
                         <button onclick="adjustAllPlayerStats(10)" class="btn-small">+10</button>
                         <button onclick="adjustAllPlayerStats(-10)" class="btn-small">-10</button>
                     </div>
                     <div id="player-stats-grid" class="stats-grid"></div>
-                    <div class="section-card"><div class="section-header"><h3><i class="fas fa-backpack"></i> 背包资产</h3><button onclick="openPlayerBackpackModal()" class="btn-small">详情管理</button></div><div id="player-backpack-preview" class="preview-box"></div></div>
-                    <div class="section-card"><div class="section-header"><h3><i class="fas fa-heart"></i> 人际关系</h3><button onclick="openPlayerRelationsModal()" class="btn-small">管理</button></div><div id="player-relations-preview" class="preview-box"></div></div>
-                    <div class="section-card"><div class="section-header"><h3><i class="fas fa-clock-rotate-left"></i> 个人生活日志</h3><button onclick="addPlayerResumeLog()" class="btn-small"><i class="fas fa-plus"></i>录入</button></div><div id="player-resume-log" class="resume-log"></div></div>
-                    <div class="section-card"><div class="section-header"><h3><i class="fas fa-trash-alt"></i> 已删除 NPC 管理</h3><button onclick="refreshDeletedNpcPanel()" class="btn-small"><i class="fas fa-sync-alt"></i>刷新</button><button onclick="clearAllDeletedNpcs()" class="btn-small text-red"><i class="fas fa-trash-can"></i>清空</button></div><div id="deleted-npcs-list" class="deleted-list"></div></div>
+                    <div class="section-card"><div class="section-header"><h5><i class="fa-regular fa-backpack"></i> 行囊</h5><button onclick="openPlayerBackpackModal()" class="btn-small">管理</button></div><div id="player-backpack-preview" class="preview-box"></div></div>
+                    <div class="section-card"><div class="section-header"><h5><i class="fa-regular fa-heart"></i> 羁绊录</h5><button onclick="openPlayerRelationsModal()" class="btn-small">编辑</button></div><div id="player-relations-preview" class="preview-box"></div></div>
+                    <div class="section-card"><div class="section-header"><h5><i class="fa-regular fa-journal"></i> 个人日志</h5><button onclick="addPlayerResumeLog()" class="btn-small">+ 记录</button></div><div id="player-resume-log" class="resume-log"></div></div>
+                    <div class="section-card"><div class="section-header"><h5><i class="fa-regular fa-trash-can"></i> 消逝者名录</h5><button onclick="refreshDeletedNpcPanel()" class="btn-small">刷新</button><button onclick="clearAllDeletedNpcs()" class="btn-small text-red">清空</button></div><div id="deleted-npcs-list" class="deleted-list"></div></div>
                 </div>
 
-                <!-- NPC视图 -->
+                <!-- 群星阵列 · NPC志 -->
                 <div id="subview-npc" class="subview-panel hidden">
-                    <div class="npc-header"><h2><i class="fas fa-users-viewfinder"></i> 群星阵列</h2><button onclick="openNpcCreationModal()" class="btn-primary"><i class="fas fa-user-plus"></i> 新角色</button></div>
-                    <div class="button-group"><button onclick="aiGenerateNpcByWorld()" class="btn-secondary"><i class="fas fa-globe"></i> 基于世界观衍生</button><button onclick="aiGenerateNpcByStory()" class="btn-secondary"><i class="fas fa-book-open"></i> 基于剧情提取</button></div>
+                    <div class="npc-header"><h4><i class="fa-regular fa-users"></i> 群星阵列</h4><button onclick="openNpcCreationModal()" class="btn-primary"><i class="fa-regular fa-plus"></i> 创角</button></div>
+                    <div class="button-group"><button onclick="aiGenerateNpcByWorld()" class="btn-secondary"><i class="fa-regular fa-globe"></i> 世界观衍生</button><button onclick="aiGenerateNpcByStory()" class="btn-secondary"><i class="fa-regular fa-book"></i> 剧情提取</button></div>
                     <div id="npc-cards-container" class="npc-cards-container"></div>
                     <div class="npc-management">
-                        <div class="section-header"><span>生态系统管理</span></div>
+                        <div class="section-header"><span><i class="fa-regular fa-diagram-project"></i> 生态管理</span></div>
                         <div class="management-buttons">
-                            <button onclick="openFamilyTreeModal()" class="btn-small"><i class="fas fa-sitemap"></i>家族树</button>
-                            <button onclick="openSituationAnalysisModal()" class="btn-small"><i class="fas fa-chart-pie"></i>局势分析</button>
-                            <button onclick="openNpcRelationsModal()" class="btn-small"><i class="fas fa-network-wired"></i>关系网</button>
-                            <button onclick="aiGenerateAllNpcRelations()" class="btn-small"><i class="fas fa-wand-sparkles"></i>AI推演</button>
-                            <label class="file-label-sm"><i class="fas fa-file-import"></i> 导入角色<input type="file" id="npc-import-file" class="hidden" accept=".json,.csv,.txt,.md,.png,.jpg,.jpeg" onchange="importNpcData(this)"></label>
+                            <button onclick="openFamilyTreeModal()" class="btn-small">家族树</button>
+                            <button onclick="openSituationAnalysisModal()" class="btn-small">局势分析</button>
+                            <button onclick="openNpcRelationsModal()" class="btn-small">关系网</button>
+                            <button onclick="aiGenerateAllNpcRelations()" class="btn-small">AI推演</button>
+                            <label class="file-label-sm"><i class="fa-regular fa-file-import"></i> 导入角色<input type="file" id="npc-import-file" class="hidden" accept=".json,.csv,.txt,.md,.png,.jpg,.jpeg" onchange="importNpcData(this)"></label>
                         </div>
                     </div>
                 </div>
 
-                <!-- 世界书视图 -->
+                <!-- 世界书·记忆殿堂 -->
                 <div id="subview-worldbook" class="subview-panel hidden">
-                    <div class="worldbook-header"><h2><i class="fas fa-scroll"></i> 世界书 · 记忆编织</h2><p>关键词自动注入背景，记录文明的每一道涟漪</p></div>
-                    <div class="worldbook-section"><div class="section-header"><i class="fas fa-globe-asia"></i> 终极世界观 · 宇宙法则</div><textarea id="wb-global-lore" rows="4" placeholder="在此输入世界的物理法则、历史宿命..."></textarea><button onclick="aiPolishWorldLore()" class="btn-secondary">AI 润色世界观</button></div>
-                    <div class="worldbook-section"><div class="section-header"><i class="fas fa-brain"></i> AI 自动记忆提炼<label class="switch"><input type="checkbox" id="wb-auto-log-toggle" onchange="toggleAutoWorldLog()"><span class="slider"></span></label></div><div id="wb-auto-log-setting" class="hidden"><label>触发关键词</label><input type="text" id="wb-auto-trigger" placeholder="秘密, 阴谋, 宝藏"></div></div>
-                    <div class="worldbook-section"><div class="section-header"><i class="fas fa-scroll"></i> 记忆殿堂 · 条目列表<button onclick="addNewWorldBookEntry()" class="btn-small"><i class="fas fa-plus"></i> 新建记忆</button></div><div id="worldbook-entries-list" class="entries-list"></div></div>
-                    <div class="worldbook-section"><div class="section-header"><i class="fas fa-compress-alt"></i> 🧠 深度记忆提取<button onclick="runAILoreSummarize()" class="btn-primary">AI 归纳</button><button onclick="saveSummaryPrompt()" class="btn-secondary">保存提示词</button></div><input type="text" id="wb-summary-prompt" value="请精简提炼并总结以下事件的重大影响，输出100字内的叙事备忘录："></div>
+                    <div class="worldbook-header"><h4><i class="fa-regular fa-scroll"></i> 世界书 · 记忆编织</h4><p>关键词自动锚定世界观纹路</p></div>
+                    <div class="worldbook-section"><div class="section-header"><i class="fa-regular fa-globe"></i> 宇宙法则</div><textarea id="wb-global-lore" rows="4" placeholder="物理规则、历史宿命……"></textarea><button onclick="aiPolishWorldLore()" class="btn-secondary">AI 润色</button></div>
+                    <div class="worldbook-section"><div class="section-header"><i class="fa-regular fa-brain"></i> 自动记忆提炼<label class="switch"><input type="checkbox" id="wb-auto-log-toggle" onchange="toggleAutoWorldLog()"><span class="slider"></span></label></div><div id="wb-auto-log-setting" class="hidden"><label>触发关键词</label><input type="text" id="wb-auto-trigger" placeholder="秘密, 阴谋, 史诗"></div></div>
+                    <div class="worldbook-section"><div class="section-header"><i class="fa-regular fa-note-sticky"></i> 记忆殿堂 <button onclick="addNewWorldBookEntry()" class="btn-small"><i class="fa-regular fa-plus"></i> 新建</button></div><div id="worldbook-entries-list" class="entries-list"></div></div>
+                    <div class="worldbook-section"><div class="section-header"><i class="fa-regular fa-compress"></i> 深度提取<button onclick="runAILoreSummarize()" class="btn-primary">AI 归纳</button><button onclick="saveSummaryPrompt()" class="btn-secondary">保存提示</button></div><input type="text" id="wb-summary-prompt" value="请提炼以下事件对世界格局的影响，输出80字备忘录："></div>
                 </div>
 
-                <!-- 论坛视图 -->
+                <!-- 虚构论坛·街谈巷议 -->
                 <div id="subview-forum" class="subview-panel hidden">
-                    <div class="forum-header"><h3><i class="fas fa-comments"></i> 玩家社区</h3><div><button onclick="forumRefresh()" class="icon-sm"><i class="fas fa-sync-alt"></i></button><button onclick="closeForumModal()" class="icon-sm"><i class="fas fa-times"></i></button></div></div>
-                    <div class="forum-tabs"><div class="forum-tab active" data-tab="hot"><i class="fas fa-fire"></i> 热门</div><div class="forum-tab" data-tab="latest"><i class="fas fa-clock"></i> 最新</div><div class="forum-tab" data-tab="npc"><i class="fas fa-robot"></i> NPC动态</div></div>
+                    <div class="forum-header"><h4><i class="fa-regular fa-comment-dots"></i> 旅者论坛</h4><div><button onclick="forumRefresh()" class="icon-btn ghost"><i class="fa-regular fa-rotate-right"></i></button><button onclick="closeForumModal()" class="icon-btn ghost"><i class="fa-regular fa-xmark"></i></button></div></div>
+                    <div class="forum-tabs"><div class="forum-tab active" data-tab="hot"><i class="fa-regular fa-fire"></i> 热门</div><div class="forum-tab" data-tab="latest"><i class="fa-regular fa-clock"></i> 最新</div><div class="forum-tab" data-tab="npc"><i class="fa-regular fa-robot"></i> NPC动态</div></div>
                     <div id="forum-posts-container" class="forum-posts-container"></div>
-                    <div class="forum-input-area"><input type="text" id="forum-post-input" placeholder="分享你的见闻..." maxlength="200"><button onclick="forumPublishPost()" class="btn-primary"><i class="fas fa-paper-plane"></i> 发布</button></div>
+                    <div class="forum-input-area"><input type="text" id="forum-post-input" placeholder="分享你的见闻..."><button onclick="forumPublishPost()" class="btn-primary">发布</button></div>
                 </div>
 
-                <!-- 设置视图（精简示例，内容由 JS 动态填充） -->
+                <!-- 设置 · 杂志工坊 -->
                 <div id="subview-settings" class="subview-panel hidden">
-                    <div class="settings-group"><div class="group-header">系统提示词与文风流派<button onclick="saveSystemPrompt()" class="btn-small">保存</button><button onclick="resetSystemPromptToDefault()" class="btn-small">重置</button></div><textarea id="set-system-prompt" rows="3"></textarea><div class="style-tags"><span onclick="applyStyleTemplate('ancient')">古风奢华</span><span onclick="applyStyleTemplate('cyber')">科幻赛博</span><span onclick="applyStyleTemplate('fantasy')">西幻史诗</span><span onclick="applyStyleTemplate('dark')">克苏鲁黑暗</span><span onclick="applyStyleTemplate('campus')">校园青春</span><span onclick="applyStyleTemplate('xiuxian')">修仙问道</span></div></div>
-                    <div class="settings-group"><div class="group-header">主控 AI 核心指令<button onclick="resetUserCorePrompt()" class="btn-small">恢复默认</button></div><textarea id="user-core-prompt" rows="6"></textarea><button onclick="saveUserCorePrompt()" class="btn-primary full-width">保存自定义指令</button></div>
-                    <div class="settings-group"><div class="group-header">AI 帮写提示词</div><textarea id="ai-help-prompt-setting" rows="3"></textarea><button onclick="saveAiHelpPrompt()" class="btn-secondary full-width">保存帮写提示词</button></div>
-                    <div class="settings-group"><div class="group-header">全局 NPC 行为逻辑提示词</div><textarea id="global-npc-logic-prompt" rows="4"></textarea><button onclick="saveGlobalNpcLogicPrompt()" class="btn-secondary full-width">保存全局逻辑</button></div>
-                    <div class="settings-group"><div class="group-header">内联组件提示词<button onclick="saveInlineComponentPromptOnly()" class="btn-small">仅保存</button><button onclick="saveInlineComponentPromptAndPolish()" class="btn-small accent">保存并AI润色</button><button onclick="setRawPromptMode()" class="btn-small">不润色</button></div><textarea id="diy-inline-component-prompt" rows="3"></textarea></div>
-                    <div class="settings-group"><div class="group-header">NPC自主活动<label class="switch"><input type="checkbox" id="npc-auto-move-toggle" onchange="toggleNpcAutoMove(this.checked)"><span class="slider"></span></label></div><div class="flex-row"><span>移动间隔</span><input type="number" id="npc-move-interval" min="1" max="20" value="3"><button onclick="saveNpcMoveSettings()" class="btn-small">保存</button><span>每次最多移动</span><input type="number" id="npc-move-max-count" min="1" max="10" value="2"><button onclick="saveNpcMoveMaxCount()" class="btn-small">保存</button></div></div>
-                    <div class="settings-group"><div class="group-header">剧情生成参数<button onclick="saveGenerationParams()" class="btn-small">保存</button></div><select id="story-length"><option value="short">短文(600-1000字)</option><option value="medium" selected>中长文(1000-1500字)</option><option value="long">长文(1200-2500字)</option></select><input type="number" id="npc-speech-count" min="0" max="5" value="2" placeholder="NPC发言数量"><input type="number" id="narration-count" min="0" max="4" value="2" placeholder="旁白段落数"><input type="number" id="card-count" min="0" max="3" value="1" placeholder="HTML卡片数量"></div>
-                    <div class="settings-group"><div class="group-header">游戏难度<select id="difficulty-select" onchange="setDifficulty(this.value)"><option value="easy">简单</option><option value="normal" selected>普通</option><option value="hard">困难</option></select></div><p id="difficulty-desc">普通模式：好感/属性调整系数 ±1.0</p></div>
-                    <div class="settings-group"><div class="group-header">全局界面缩放</div><div class="zoom-controls"><button onclick="changeZoom(-0.05)">−</button><span id="global-zoom-value">0.90</span><button onclick="changeZoom(0.05)">+</button><button onclick="setGlobalZoom(1.0)">重置</button><input type="range" id="global-zoom-slider" min="0.6" max="1.2" step="0.01" value="0.9" oninput="setGlobalZoom(this.value)"></div></div>
-                    <div class="settings-group"><div class="group-header">数据存档</div><div class="button-group"><button onclick="executeSaveAction()" class="btn-secondary">本地快照存盘</button><button onclick="executeExportAction()" class="btn-secondary">导出JSON文件</button></div><label class="file-label-sm">导入JSON覆盖还原<input type="file" accept=".json" onchange="executeImportFileAction(this)" class="hidden"></label><button onclick="confirmFactoryReset()" class="btn-danger full-width"><i class="fas fa-exclamation-triangle"></i> 恢复出厂设置</button></div>
+                    <div class="settings-group"><div class="group-header">叙事风格与系统提示<button onclick="saveSystemPrompt()" class="btn-small">保存</button><button onclick="resetSystemPromptToDefault()" class="btn-small">重置</button></div><textarea id="set-system-prompt" rows="3"></textarea><div class="style-tags"><span onclick="applyStyleTemplate('ancient')">🏮 古风</span><span onclick="applyStyleTemplate('cyber')">🌃 赛博</span><span onclick="applyStyleTemplate('fantasy')">🐉 奇幻</span><span onclick="applyStyleTemplate('dark')">🌙 克苏鲁</span><span onclick="applyStyleTemplate('campus')">📖 校园</span><span onclick="applyStyleTemplate('xiuxian')">☯️ 修仙</span></div></div>
+                    <div class="settings-group"><div class="group-header">主控AI核心指令<button onclick="resetUserCorePrompt()" class="btn-small">恢复默认</button></div><textarea id="user-core-prompt" rows="6"></textarea><button onclick="saveUserCorePrompt()" class="btn-primary full-width">保存自定义指令</button></div>
+                    <div class="settings-group"><div class="group-header">AI帮写提示词</div><textarea id="ai-help-prompt-setting" rows="3"></textarea><button onclick="saveAiHelpPrompt()" class="btn-secondary full-width">保存</button></div>
+                    <div class="settings-group"><div class="group-header">全局NPC行为逻辑</div><textarea id="global-npc-logic-prompt" rows="4"></textarea><button onclick="saveGlobalNpcLogicPrompt()" class="btn-secondary full-width">保存全局逻辑</button></div>
+                    <div class="settings-group"><div class="group-header">内联组件提示<button onclick="saveInlineComponentPromptOnly()" class="btn-small">仅保存</button><button onclick="saveInlineComponentPromptAndPolish()" class="btn-small accent">保存并AI润色</button><button onclick="setRawPromptMode()" class="btn-small">不润色</button></div><textarea id="diy-inline-component-prompt" rows="3"></textarea></div>
+                    <div class="settings-group"><div class="group-header">NPC自主移动<label class="switch"><input type="checkbox" id="npc-auto-move-toggle" onchange="toggleNpcAutoMove(this.checked)"><span class="slider"></span></label></div><div class="flex-row"><span>间隔(秒)</span><input type="number" id="npc-move-interval" min="1" max="20" value="3"><button onclick="saveNpcMoveSettings()" class="btn-small">保存</button><span>每次最多移动</span><input type="number" id="npc-move-max-count" min="1" max="10" value="2"><button onclick="saveNpcMoveMaxCount()" class="btn-small">保存</button></div></div>
+                    <div class="settings-group"><div class="group-header">剧情生成参数<button onclick="saveGenerationParams()" class="btn-small">保存</button></div><select id="story-length"><option value="short">短文 (600-1000)</option><option value="medium" selected>中长文 (1000-1500)</option><option value="long">长文 (1200-2500)</option></select><input type="number" id="npc-speech-count" placeholder="NPC发言数量" value="2"><input type="number" id="narration-count" placeholder="旁白段数" value="2"><input type="number" id="card-count" placeholder="HTML卡片数量" value="1"></div>
+                    <div class="settings-group"><div class="group-header">游戏难度<select id="difficulty-select" onchange="setDifficulty(this.value)"><option value="easy">简单</option><option value="normal" selected>普通</option><option value="hard">困难</option></select></div></div>
+                    <div class="settings-group"><div class="group-header">全局缩放</div><div class="zoom-controls"><button onclick="changeZoom(-0.05)">−</button><span id="global-zoom-value">0.90</span><button onclick="changeZoom(0.05)">+</button><button onclick="setGlobalZoom(1.0)">重置</button><input type="range" id="global-zoom-slider" min="0.6" max="1.2" step="0.01" value="0.9" oninput="setGlobalZoom(this.value)"></div></div>
+                    <div class="settings-group"><div class="group-header">存档与数据</div><div class="button-group"><button onclick="executeSaveAction()" class="btn-secondary">本地快照</button><button onclick="executeExportAction()" class="btn-secondary">导出JSON</button></div><label class="file-label-sm">导入JSON还原<input type="file" accept=".json" onchange="executeImportFileAction(this)" class="hidden"></label><button onclick="confirmFactoryReset()" class="btn-danger full-width mt-2"><i class="fa-regular fa-triangle-exclamation"></i> 恢复出厂设置</button></div>
                 </div>
             </div>
 
-            <!-- 底部导航栏 -->
+            <!-- 底部导航栏 · 杂志工具栏 -->
             <div class="bottom-nav" id="bottom-nav-bar">
-                <button onclick="switchSubview('subview-story')" class="nav-item active" data-nav="story"><i class="fas fa-book-open"></i><span>故事</span></button>
-                <button onclick="switchSubview('subview-map')" class="nav-item" data-nav="map"><i class="fas fa-map-location-dot"></i><span>大地图</span></button>
-                <button onclick="switchSubview('subview-stats')" class="nav-item" data-nav="stats"><i class="fas fa-id-card"></i><span>属性日志</span></button>
-                <button onclick="switchSubview('subview-npc')" class="nav-item" data-nav="npc"><i class="fas fa-users-viewfinder"></i><span>NPC</span></button>
-                <button onclick="switchSubview('subview-worldbook')" class="nav-item" data-nav="worldbook"><i class="fas fa-scroll"></i><span>世界书</span></button>
-                <button onclick="switchSubview('subview-forum')" class="nav-item" data-nav="forum"><i class="fas fa-comments"></i><span>论坛</span></button>
-                <button onclick="switchSubview('subview-settings')" class="nav-item" data-nav="settings"><i class="fas fa-sliders-h"></i><span>设置</span></button>
+                <button onclick="switchSubview('subview-story')" class="nav-item active" data-nav="story"><i class="fa-regular fa-book-open"></i><span>故事</span></button>
+                <button onclick="switchSubview('subview-map')" class="nav-item" data-nav="map"><i class="fa-regular fa-map"></i><span>地图</span></button>
+                <button onclick="switchSubview('subview-stats')" class="nav-item" data-nav="stats"><i class="fa-regular fa-id-card"></i><span>角色</span></button>
+                <button onclick="switchSubview('subview-npc')" class="nav-item" data-nav="npc"><i class="fa-regular fa-users"></i><span>群星</span></button>
+                <button onclick="switchSubview('subview-worldbook')" class="nav-item" data-nav="worldbook"><i class="fa-regular fa-scroll"></i><span>世界书</span></button>
+                <button onclick="switchSubview('subview-forum')" class="nav-item" data-nav="forum"><i class="fa-regular fa-comments"></i><span>论坛</span></button>
+                <button onclick="switchSubview('subview-settings')" class="nav-item" data-nav="settings"><i class="fa-regular fa-sliders"></i><span>工坊</span></button>
             </div>
         </div>
     </div>
 
-    <!-- 模态框占位（部分将由 JS 动态生成） -->
+    <!-- 模态框容器 (动态内容) -->
     <div id="modal-user-manager" class="modal-overlay hidden"></div>
     <div id="modal-world-creator" class="modal-overlay hidden"></div>
     <div id="modal-npc-creator" class="modal-overlay hidden"></div>
     <div id="modal-npc-interactive" class="modal-overlay hidden"></div>
     <div id="modal-location-detail" class="modal-overlay hidden"></div>
-    <!-- 其余模态框可动态添加 -->
 
-    <!-- 脚本模块（按顺序加载） -->
+    <!-- 脚本加载，保持原有模块顺序 -->
     <script src="js/data.js"></script>
     <script src="js/api.js"></script>
     <script src="js/save.js"></script>
