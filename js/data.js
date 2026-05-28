@@ -1,11 +1,5 @@
 const DEFAULT_DATA = {
-    api: {
-        endpoint: '',
-        key: '',
-        model: '',
-        temperature: 0.8,
-        maxTokens: 2048
-    },
+    api: { endpoint: '', key: '', model: '', temperature: 0.8, maxTokens: 2048 },
     personaList: [],
     worldList: [],
     activeWorldId: null,
@@ -15,18 +9,11 @@ const DEFAULT_DATA = {
             name: '古风宫廷',
             content: `你是一个专业的文字游戏主持人，请根据以下设定进行游戏：
 世界观：架空古代宫廷，玩家是初入宫廷的秀女。环境暗流涌动，充满权谋与情感纠葛。
-规则：使用第二人称“你”叙述，对话使用粗体【如：**你好**】，内心活动使用斜体【如：*这该怎么办*】。重要物品和属性用【】标注。
+规则：使用第二人称“你”叙述，对话使用**粗体**，内心活动使用*斜体*。重要物品和属性用【】标注。
 每次回复给出三段式剧情描述，并在结尾提供3个明确的行动选项。`
         }
     ],
-    theme: {
-        primary: '#6c5ce7',
-        bg: '#1a1a2e',
-        cardBg: '#1e1e3a',
-        text: '#e0dce8',
-        accent: '#ff6b9d',
-        radius: 12
-    },
+    theme: { primary:'#6c5ce7', bg:'#f8f9fa', cardBg:'#ffffff', text:'#2d3436', accent:'#e84393' },
     festivalList: ['春节,30', '中秋,90'],
     writingStyle: 'elegant',
     memoryMode: 'recent',
@@ -60,7 +47,8 @@ function createNewGameInstance(worldName, rules) {
         forumMessages: [],
         mapWorlds: [{ id:'default', name:'主世界', bgImage:'' }],
         currentMapWorldId: 'default',
-        saveSlots: []
+        saveSlots: [],
+        notifications: []
     };
 }
 
@@ -75,10 +63,7 @@ const SAMPLE_NPCS = [
         relations: [{ target: 'npc2', type: '敌对' }],
         familyTree: { father: '柳国公', mother: '王氏' },
         interactions: ['请安', '送礼', '交谈', '挑衅'],
-        phoneContent: {
-            apps: ['备忘录', '密函', '账本'],
-            messages: []
-        }
+        phoneContent: { apps: ['备忘录', '密函', '账本'], messages: [] }
     },
     {
         id: 'npc2',
