@@ -1,6 +1,5 @@
-/* ========== css/style.css - 杂志风格完整版 ========== */
+/* ========== 主题变量 ========== */
 :root {
-    /* 基础色调 */
     --bg-primary: #ffffff;
     --bg-secondary: #f8f8fa;
     --bg-tertiary: #efeff2;
@@ -11,27 +10,19 @@
     --accent: #c44569;
     --accent-dim: #a83c5a;
     --accent-soft: #fce4ec;
-    /* 组件背景 */
-    --card-bg: #ffffff;
-    --frost-bg: rgba(255,255,255,0.94);
-    --shadow-sm: 0 4px 12px rgba(0,0,0,0.04);
-    --shadow-md: 0 8px 24px rgba(0,0,0,0.06);
-    --shadow-lg: 0 16px 40px rgba(0,0,0,0.1);
-    /* 圆角 */
-    --radius-md: 16px;
-    --radius-lg: 24px;
-    /* 字体 */
-    --font-serif: 'Playfair Display', 'Times New Roman', serif;
-    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-    --font-scale: 1;
-    --nav-height: 64px;
-    /* 气泡特定变量（将被 JS 覆盖） */
     --bubble-self-bg: #c44569;
     --bubble-self-color: #ffffff;
     --bubble-npc-bg: #f0f0f5;
     --bubble-npc-color: #1a1a2c;
-    --bubble-font-size: 0.85rem;
-    --narration-font-size: 0.82rem;
+    --frost-bg: rgba(255,255,255,0.94);
+    --shadow-sm: 0 4px 12px rgba(0,0,0,0.04);
+    --shadow-md: 0 8px 24px rgba(0,0,0,0.06);
+    --shadow-lg: 0 16px 40px rgba(0,0,0,0.1);
+    --radius-md: 16px;
+    --radius-lg: 24px;
+    --font-serif: 'Playfair Display', 'Times New Roman', serif;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    --nav-height: 64px;
 }
 .theme-night {
     --bg-primary: #121212;
@@ -44,47 +35,33 @@
     --accent: #d46b7e;
     --accent-dim: #b24c60;
     --accent-soft: #3a2a30;
-    --card-bg: #1c1c22;
+    --bubble-self-bg: #d46b7e;
+    --bubble-npc-bg: #2a2a30;
+    --bubble-npc-color: #f0f0f4;
     --frost-bg: rgba(18,18,18,0.94);
     --shadow-sm: 0 4px 12px rgba(0,0,0,0.2);
     --shadow-md: 0 8px 24px rgba(0,0,0,0.25);
     --shadow-lg: 0 16px 40px rgba(0,0,0,0.3);
-    --bubble-self-bg: #d46b7e;
-    --bubble-npc-bg: #2a2a30;
-    --bubble-npc-color: #f0f0f4;
 }
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+
+/* ========== 重置与基础 ========== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
 body {
     background: #eef0f3;
     font-family: var(--font-sans);
-    font-size: calc(0.95rem * var(--font-scale));
+    font-size: 0.95rem;
     line-height: 1.5;
     color: var(--text-primary);
     transition: background 0.3s, color 0.3s;
 }
-.theme-night body {
-    background: #0a0a0e;
-}
-::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
-}
-::-webkit-scrollbar-track {
-    background: var(--bg-tertiary);
-    border-radius: 4px;
-}
-::-webkit-scrollbar-thumb {
-    background: var(--accent);
-    border-radius: 4px;
-}
-.hidden {
-    display: none !important;
-}
-/* ========== 主容器 ========== */
+.theme-night body { background: #0a0a0e; }
+
+/* 滚动条 */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg-tertiary); border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 4px; }
+
+/* 主容器 */
 .app-root {
     max-width: 480px;
     margin: 0 auto;
@@ -95,16 +72,24 @@ body {
     border-left: 1px solid var(--border-color);
     border-right: 1px solid var(--border-color);
 }
-/* ========== 大厅 ========== */
-.lobby-header {
+
+/* ========== 辅助类 ========== */
+.hidden { display: none !important; }
+.text-red { color: #e74c3c; }
+.cursor-pointer { cursor: pointer; }
+.flex-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.full-width { width: 100%; }
+
+/* ========== 大厅杂志风格 ========== */
+.magazine-hero {
     padding: 28px 20px 16px;
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: 24px;
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 24px;
 }
-.lobby-brand h1 {
+.magazine-title {
     font-family: var(--font-serif);
     font-size: 1.8rem;
     font-weight: 700;
@@ -114,16 +99,12 @@ body {
     -webkit-background-clip: text;
     color: transparent;
 }
-.tagline {
-    font-size: 0.7rem;
+.magazine-subtitle {
+    font-size: 0.75rem;
     color: var(--text-muted);
-    margin-top: 4px;
+    margin-top: 6px;
 }
-.lobby-actions {
-    display: flex;
-    gap: 8px;
-}
-.magazine-section {
+.magazine-card {
     background: var(--bg-secondary);
     border-radius: var(--radius-lg);
     padding: 20px;
@@ -132,34 +113,19 @@ body {
     box-shadow: var(--shadow-sm);
     transition: transform 0.2s, box-shadow 0.2s;
 }
-.magazine-section:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-}
-.section-header {
+.magazine-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.card-header {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
     margin-bottom: 16px;
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.03em;
     color: var(--text-muted);
     text-transform: uppercase;
 }
-.section-header h2, .section-header h3 {
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: var(--text-secondary);
-}
-.section-header i {
-    margin-right: 6px;
-}
-.world-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
+.world-list { display: flex; flex-direction: column; gap: 12px; }
 .world-item {
     background: var(--bg-primary);
     border-radius: var(--radius-md);
@@ -168,88 +134,14 @@ body {
     transition: all 0.2s;
     cursor: pointer;
 }
-.world-item:hover {
-    border-color: var(--accent);
-    box-shadow: var(--shadow-sm);
-}
-.world-name {
-    font-weight: 700;
-    font-size: 1rem;
-    color: var(--text-primary);
-}
-.world-desc {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    margin-top: 4px;
-}
-.world-meta {
-    font-size: 0.65rem;
-    color: var(--text-muted);
-    margin-top: 8px;
-}
-.action-grid {
-    display: flex;
-    gap: 12px;
-}
-.action-grid button {
-    flex: 1;
-}
-.resume-banner {
-    background: var(--bg-secondary);
-    border: 2px solid var(--accent);
-    border-radius: var(--radius-md);
-    padding: 12px 16px;
-    margin: 0 16px 20px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    cursor: pointer;
-}
-.resume-banner i {
-    font-size: 1.5rem;
-    color: var(--accent);
-}
-.resume-label {
-    font-weight: bold;
-    font-size: 0.8rem;
-}
-.save-list {
-    max-height: 200px;
-    overflow-y: auto;
-}
-.save-item {
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 8px 12px;
-    margin-bottom: 8px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.collapsible-content {
-    margin-top: 16px;
-}
-.theme-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border-color);
-}
-.theme-row span {
-    font-size: 0.75rem;
-}
-.theme-row input[type="color"] {
-    width: 32px;
-    height: 32px;
-    border: none;
-    background: transparent;
-}
-.theme-row input[type="range"] {
-    width: 140px;
-}
-/* ========== 按钮通用 ========== */
+.world-item:hover { border-color: var(--accent); box-shadow: var(--shadow-sm); }
+.world-name { font-weight: 700; font-size: 1rem; }
+.world-desc { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+.world-meta { font-size: 0.65rem; color: var(--text-muted); margin-top: 8px; }
+.button-group { display: flex; gap: 12px; flex-wrap: wrap; }
+.button-group button { flex: 1; }
+
+/* 按钮风格 */
 .btn-primary, .btn-secondary, .btn-small, .btn-danger, .btn-outline {
     border: none;
     border-radius: 60px;
@@ -257,41 +149,16 @@ body {
     font-size: 0.8rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s;
     font-family: var(--font-sans);
 }
-.btn-primary {
-    background: var(--accent);
-    color: white;
-    box-shadow: var(--shadow-sm);
-}
-.btn-primary:hover {
-    background: var(--accent-dim);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
-}
-.btn-secondary {
-    background: var(--bg-tertiary);
-    color: var(--text-secondary);
-    border: 1px solid var(--border-color);
-}
-.btn-secondary:hover {
-    background: var(--bg-secondary);
-}
-.btn-small {
-    padding: 6px 14px;
-    font-size: 0.7rem;
-    background: var(--bg-tertiary);
-}
-.btn-danger {
-    background: #e74c3c;
-    color: white;
-}
-.btn-outline {
-    background: transparent;
-    border: 1px solid var(--accent);
-    color: var(--accent);
-}
+.btn-primary { background: var(--accent); color: white; box-shadow: var(--shadow-sm); }
+.btn-primary:hover { background: var(--accent-dim); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.btn-secondary { background: var(--bg-tertiary); color: var(--text-secondary); border: 1px solid var(--border-color); }
+.btn-secondary:hover { background: var(--bg-secondary); }
+.btn-small { padding: 6px 14px; font-size: 0.7rem; background: var(--bg-tertiary); }
+.btn-danger { background: #e74c3c; color: white; }
+.btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
 .icon-btn {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
@@ -302,70 +169,9 @@ body {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.2s;
 }
-.icon-btn:hover {
-    background: var(--accent-soft);
-    border-color: var(--accent);
-}
-.full-width {
-    width: 100%;
-    margin-top: 12px;
-}
-.file-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
-    border-radius: 40px;
-    padding: 6px 12px;
-    font-size: 0.7rem;
-    cursor: pointer;
-}
-/* ========== API 配置页 ========== */
-.api-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 16px;
-    border-bottom: 1px solid var(--border-color);
-}
-.back-btn {
-    background: none;
-    border: none;
-    font-size: 1.2rem;
-    cursor: pointer;
-    color: var(--text-secondary);
-}
-.api-form {
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-.api-form label {
-    font-size: 0.75rem;
-    font-weight: 600;
-}
-.api-form input, .api-form select {
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
-    border-radius: 40px;
-    padding: 10px 16px;
-    font-size: 0.8rem;
-}
-.api-actions {
-    display: flex;
-    gap: 12px;
-}
-.model-list {
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: 12px;
-    max-height: 150px;
-    overflow-y: auto;
-}
+.icon-sm { width: 32px; height: 32px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 50%; }
+
 /* ========== 游戏顶部栏 ========== */
 .game-top-bar {
     position: sticky;
@@ -379,36 +185,40 @@ body {
     align-items: center;
     border-bottom: 1px solid var(--border-color);
 }
-.game-info {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: baseline;
-}
-.game-info h3 {
-    font-family: var(--font-serif);
-    font-size: 1rem;
-    font-weight: 600;
-}
-.chip-btn {
+.game-info { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+.game-info h3 { font-family: var(--font-serif); font-size: 1rem; font-weight: 600; }
+.weather-chip, .festival-chip, .badge-location {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
     border-radius: 40px;
     padding: 4px 12px;
     font-size: 0.65rem;
-    font-weight: 500;
-    cursor: pointer;
 }
-.chip-btn:hover {
-    background: var(--accent-soft);
-    border-color: var(--accent);
+.daynight-toggle {
+    width: 44px;
+    height: 24px;
+    border-radius: 24px;
+    background: var(--bg-tertiary);
+    border: 2px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    padding: 2px;
 }
+.daynight-toggle .toggle-knob {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    transition: transform 0.4s;
+}
+.theme-night .daynight-toggle .toggle-knob { transform: translateX(20px); }
+
 /* ========== 剧情终端 ========== */
 .story-terminal {
     padding: 20px;
     background: var(--bg-primary);
     min-height: 400px;
-    max-height: 60vh;
+    max-height: 65vh;
     overflow-y: auto;
 }
 .bubble-wrap {
@@ -417,12 +227,8 @@ body {
     margin: 16px 0;
     align-items: flex-end;
 }
-.bubble-wrap.npc {
-    flex-direction: row;
-}
-.bubble-wrap.self {
-    flex-direction: row-reverse;
-}
+.bubble-wrap.npc { flex-direction: row; }
+.bubble-wrap.self { flex-direction: row-reverse; }
 .bubble-avatar {
     width: 36px;
     height: 36px;
@@ -438,9 +244,9 @@ body {
 }
 .bubble-body {
     max-width: 78%;
-    padding: 12px 18px;
-    border-radius: 28px;
-    font-size: var(--bubble-font-size);
+    padding: 12px 16px;
+    border-radius: 24px;
+    font-size: 0.85rem;
     line-height: 1.5;
     background: var(--bubble-npc-bg);
     color: var(--bubble-npc-color);
@@ -461,11 +267,10 @@ body {
     padding: 12px 20px;
     margin: 16px 0;
     font-style: italic;
-    font-size: var(--narration-font-size);
+    font-size: 0.85rem;
     color: var(--text-secondary);
     background: var(--bg-secondary);
     border-radius: 40px;
-    line-height: 1.5;
 }
 .story-control-panel {
     background: var(--bg-secondary);
@@ -484,20 +289,15 @@ body {
 .choices-box button {
     width: 100%;
     text-align: left;
-    padding: 10px 12px;
+    padding: 12px;
     background: var(--bg-secondary);
     border: none;
     border-radius: 12px;
     margin-bottom: 6px;
-    font-size: 0.8rem;
     transition: all 0.2s;
 }
-.choices-box button:hover {
-    background: var(--accent);
-    color: white;
-    transform: translateX(4px);
-}
-.input-area {
+.choices-box button:hover { background: var(--accent); color: white; transform: translateX(4px); }
+.input-row {
     display: flex;
     gap: 10px;
     align-items: center;
@@ -506,18 +306,8 @@ body {
     padding: 6px 12px;
     border: 1px solid var(--border-color);
 }
-.input-area input {
-    flex: 1;
-    background: transparent;
-    border: none;
-    outline: none;
-    font-size: 0.85rem;
-}
-.control-buttons {
-    display: flex;
-    gap: 12px;
-    margin: 12px 0;
-}
+.input-row input { flex: 1; background: transparent; border: none; outline: none; font-size: 0.85rem; }
+
 /* ========== 地图 ========== */
 .explore-map-container {
     border-radius: var(--radius-lg);
@@ -526,17 +316,6 @@ body {
     background-color: var(--bg-tertiary);
     min-height: 320px;
     position: relative;
-    background-size: cover;
-    background-position: center;
-}
-.map-empty-hint {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
 }
 .map-marker-dot {
     position: absolute;
@@ -548,18 +327,14 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1rem;
     box-shadow: var(--shadow-md);
     cursor: pointer;
     transition: transform 0.2s;
-    z-index: 10;
 }
-.map-marker-dot:hover {
-    transform: scale(1.15);
-}
+.map-marker-dot:hover { transform: scale(1.15); }
 .map-marker-label {
     position: absolute;
-    transform: translate(-50%, 28px);
+    transform: translate(-50%, 26px);
     background: rgba(0,0,0,0.7);
     backdrop-filter: blur(8px);
     padding: 2px 10px;
@@ -569,15 +344,7 @@ body {
     white-space: nowrap;
     pointer-events: none;
 }
-.location-form {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-top: 20px;
-}
-.location-form button {
-    margin-top: 0;
-}
+
 /* ========== 玩家卡片 ========== */
 .player-card {
     background: linear-gradient(145deg, var(--bg-primary), var(--bg-secondary));
@@ -586,281 +353,21 @@ body {
     margin-bottom: 20px;
     box-shadow: var(--shadow-md);
 }
-.player-card-header {
-    height: 4px;
-    background: linear-gradient(90deg, var(--accent), #6c5ce7);
-    border-radius: 2px;
-    margin-bottom: 16px;
-}
-.player-card-body {
-    display: flex;
-    gap: 20px;
-    align-items: center;
-}
+.player-card-header { height: 4px; background: linear-gradient(90deg, var(--accent), #6c5ce7); border-radius: 2px; margin-bottom: 16px; }
+.player-card-body { display: flex; gap: 20px; align-items: center; }
 .player-avatar {
     width: 80px;
     height: 80px;
     border-radius: 50%;
-    background: var(--bg-tertiary);
-    position: relative;
-    cursor: pointer;
     overflow: hidden;
-}
-.player-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-.player-info {
-    flex: 1;
-}
-.player-info input {
-    font-weight: 700;
-    font-size: 1rem;
-    background: transparent;
-    border: none;
-    width: 100px;
-}
-.player-setting-preview {
-    margin-top: 8px;
-    border-left: 2px solid var(--accent);
-    padding-left: 12px;
-}
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    margin: 20px 0;
-}
-.stat-card {
-    background: var(--bg-secondary);
-    border-radius: var(--radius-md);
-    padding: 12px;
-    text-align: center;
-    border: 1px solid var(--border-color);
-}
-.backpack-preview, .relations-preview, .resume-log, .deleted-npcs-list {
-    background: var(--bg-secondary);
-    border-radius: 12px;
-    padding: 8px;
-    min-height: 60px;
-    margin-top: 8px;
-}
-.cheat-bar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 20px;
-}
-.switch {
+    background: var(--bg-tertiary);
+    cursor: pointer;
     position: relative;
-    display: inline-block;
-    width: 40px;
-    height: 20px;
 }
-.switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-.slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ccc;
-    border-radius: 20px;
-    transition: 0.3s;
-}
-.slider:before {
-    position: absolute;
-    content: "";
-    height: 16px;
-    width: 16px;
-    left: 2px;
-    bottom: 2px;
-    background-color: white;
-    border-radius: 50%;
-    transition: 0.3s;
-}
-input:checked + .slider {
-    background-color: var(--accent);
-}
-input:checked + .slider:before {
-    transform: translateX(20px);
-}
-/* ========== NPC 卡片 ========== */
-.npc-cards-container {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    max-height: 400px;
-    overflow-y: auto;
-}
-.npc-card {
-    background: var(--bg-primary);
-    border-radius: var(--radius-md);
-    padding: 14px;
-    display: flex;
-    gap: 14px;
-    align-items: center;
-    border: 1px solid var(--border-color);
-    transition: all 0.2s;
-    cursor: pointer;
-}
-.npc-card:hover {
-    transform: translateX(6px);
-    border-left: 3px solid var(--accent);
-    box-shadow: var(--shadow-sm);
-}
-.npc-avatar {
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    background: var(--bg-tertiary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 1.2rem;
-    overflow: hidden;
-}
-.npc-info {
-    flex: 1;
-}
-.npc-name {
-    font-weight: 700;
-}
-.npc-relation {
-    font-size: 0.7rem;
-    color: var(--text-muted);
-}
-.management-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 12px;
-}
-/* ========== 世界书 ========== */
-.worldbook-entries-list {
-    max-height: 300px;
-    overflow-y: auto;
-}
-.worldbook-entry {
-    background: var(--bg-secondary);
-    border-radius: var(--radius-md);
-    padding: 12px;
-    margin-bottom: 12px;
-    border: 1px solid var(--border-color);
-}
-.worldbook-entry textarea {
-    width: 100%;
-    margin-top: 8px;
-    border-radius: 12px;
-    border: 1px solid var(--border-color);
-    background: var(--bg-primary);
-    padding: 8px;
-    font-size: 0.75rem;
-}
-/* ========== 论坛 ========== */
-.forum-posts-container {
-    max-height: 400px;
-    overflow-y: auto;
-}
-.forum-post {
-    background: var(--bg-secondary);
-    border-radius: var(--radius-md);
-    padding: 14px;
-    margin-bottom: 12px;
-    cursor: pointer;
-    border: 1px solid var(--border-color);
-    transition: all 0.2s;
-}
-.forum-post:hover {
-    transform: translateY(-2px);
-    border-color: var(--accent);
-}
-.forum-tabs {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 16px;
-}
-.forum-tab {
-    padding: 6px 16px;
-    border-radius: 40px;
-    background: var(--bg-tertiary);
-    font-size: 0.75rem;
-    cursor: pointer;
-}
-.forum-tab.active {
-    background: var(--accent);
-    color: white;
-}
-.forum-input-area {
-    display: flex;
-    margin-top: 12px;
-}
-.forum-input-area input {
-    flex: 1;
-    border-radius: 40px;
-    padding: 8px 12px;
-    border: 1px solid var(--border-color);
-    background: var(--bg-primary);
-}
-.forum-input-area button {
-    margin-left: 8px;
-    border-radius: 40px;
-}
-/* ========== 设置面板 ========== */
-.settings-section {
-    background: var(--bg-secondary);
-    border-radius: var(--radius-md);
-    padding: 16px;
-    margin-bottom: 20px;
-    border: 1px solid var(--border-color);
-}
-.settings-section textarea, .settings-section select, .settings-section input {
-    width: 100%;
-    border-radius: 12px;
-    border: 1px solid var(--border-color);
-    background: var(--bg-primary);
-    padding: 10px;
-    font-size: 0.8rem;
-    margin-top: 6px;
-}
-.style-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 12px;
-}
-.style-tags span {
-    background: var(--bg-tertiary);
-    padding: 4px 12px;
-    border-radius: 40px;
-    font-size: 0.7rem;
-    cursor: pointer;
-}
-.style-tags span:hover {
-    background: var(--accent);
-    color: white;
-}
-.festival-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 8px;
-}
-.festival-tag {
-    background: var(--bg-tertiary);
-    padding: 4px 12px;
-    border-radius: 40px;
-    font-size: 0.7rem;
-    cursor: pointer;
-}
-/* ========== 底部导航栏 ========== */
+.stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 20px 0; }
+.stat-card { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 12px; text-align: center; border: 1px solid var(--border-color); }
+
+/* ========== 底部导航 ========== */
 .bottom-nav {
     position: fixed;
     bottom: 0;
@@ -886,17 +393,12 @@ input:checked + .slider:before {
     color: var(--text-muted);
     font-size: 0.6rem;
     font-weight: 500;
-    cursor: pointer;
     transition: color 0.2s;
 }
-.nav-item i {
-    font-size: 1.2rem;
-}
-.nav-item.active {
-    color: var(--accent);
-    font-weight: 600;
-}
-/* ========== 模态框通用 ========== */
+.nav-item i { font-size: 1.2rem; }
+.nav-item.active { color: var(--accent); font-weight: 600; }
+
+/* ========== 模态框 ========== */
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -918,103 +420,59 @@ input:checked + .slider:before {
     box-shadow: var(--shadow-lg);
     border: 1px solid var(--border-color);
 }
-/* ========== 响应式 ========== */
-@media (max-width: 480px) {
-    .app-root {
-        width: 100%;
-        border-left: none;
-        border-right: none;
-        border-radius: 0;
-    }
-    .magazine-section {
-        margin: 0 12px 16px;
-    }
-    .bubble-body {
-        max-width: 85%;
-    }
-    .location-form {
-        grid-template-columns: 1fr;
-    }
+
+/* ========== 其他（论坛、世界书条目、设置项等） ========== */
+.forum-posts-container { max-height: 400px; overflow-y: auto; }
+.forum-post {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s;
 }
-/* ========== 工具类 ========== */
-.flex-row {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    flex-wrap: wrap;
-}
-.text-red {
-    color: #ef4444;
-}
-.cursor-pointer {
+.forum-post:hover { transform: translateY(-2px); border-color: var(--accent); }
+.forum-tabs { display: flex; gap: 12px; margin-bottom: 16px; }
+.forum-tab {
+    padding: 6px 16px;
+    border-radius: 40px;
+    background: var(--bg-tertiary);
+    font-size: 0.75rem;
     cursor: pointer;
 }
-.text-mini {
-    font-size: 0.65rem;
-    padding: 2px 6px;
+.forum-tab.active { background: var(--accent); color: white; }
+.worldbook-entry {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border-color);
 }
-.global-bg-layer {
-    position: fixed;
-    top: 0;
-    left: 0;
+.settings-group {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border-color);
+}
+.settings-group textarea, .settings-group select, .settings-group input {
     width: 100%;
-    height: 100%;
-    z-index: -1;
-    background-size: cover;
-    background-position: center;
-    transition: opacity 0.3s, filter 0.3s;
-    pointer-events: none;
-}
-.toast-container {
-    position: fixed;
-    top: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 1000;
-    pointer-events: none;
-}
-.toast {
-    background: var(--bg-primary);
-    border-left: 4px solid;
     border-radius: 12px;
-    padding: 10px 16px;
-    margin-bottom: 8px;
-    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    padding: 10px;
     font-size: 0.8rem;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    margin-top: 6px;
 }
-.toast.success {
-    border-left-color: #10b981;
+.style-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.style-tags span {
+    background: var(--bg-tertiary);
+    padding: 4px 12px;
+    border-radius: 40px;
+    font-size: 0.7rem;
+    cursor: pointer;
 }
-.toast.error {
-    border-left-color: #ef4444;
-}
-.global-loader {
-    position: fixed;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 480px;
-    background: var(--frost-bg);
-    border-bottom: 2px solid var(--accent);
-    padding: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    z-index: 10000;
-}
-.loader-spinner {
-    width: 20px;
-    height: 20px;
-    border: 3px solid var(--border-color);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-}
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
+.style-tags span:hover { background: var(--accent); color: white; }
+.zoom-controls { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+.zoom-controls button { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border-color); background: var(--bg-primary); }
