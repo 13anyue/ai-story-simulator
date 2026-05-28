@@ -23,16 +23,8 @@ const AppState = {
             this.updateApiStatus();
         } catch (e) {
             console.error('初始化失败:', e);
-        } finally {
-            // 无论是否出错，都隐藏加载遮罩
-            const overlay = document.getElementById('loading-overlay');
-            if (overlay) {
-                overlay.style.opacity = '0';
-                setTimeout(() => {
-                    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-                }, 300);
-            }
         }
+        // 已移除加载遮罩相关代码
     },
 
     bindEvents() {
