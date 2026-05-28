@@ -1,54 +1,32 @@
-const GameSystems = {
-    addLifeLog(game, text) {
-        game.lifeLog.unshift({ time: `第${game.day}天 ${game.time}`, text });
-        if (game.lifeLog.length > 50) game.lifeLog.pop();
-    },
-    recordNpcAppearance(game, npcId) {
-        if (!game.npcMeetCount[npcId]) game.npcMeetCount[npcId] = 0;
-        game.npcMeetCount[npcId]++;
-        if (game.npcMeetCount[npcId] === 3) {
-            const npc = game.npcs.find(n => n.id === npcId);
-            if (npc && !npc.known) {
-                npc.known = true;
-                UI.showToast(`你认识了 ${npc.name}`);
-                this.addLifeLog(game, `与${npc.name}正式相识。`);
-            }
-        }
-    },
-    addItem(game, item, isPrivate = false) {
-        const list = isPrivate ? game.player.privateItems : game.player.inventory;
-        list.push({ id: Date.now(), name: item.name, desc: item.desc, icon: item.icon || 'fa-box' });
-    },
-    getFamilyTree(npc) {
-        if (!npc.familyTree) return '无家族信息';
-        return Object.entries(npc.familyTree).map(([rel, name]) => `${rel}: ${name}`).join('，');
-    },
-    checkFestival(game) {
-        const festivals = AppState.festivalList || [];
-        for (let f of festivals) {
-            const [name, interval] = f.split(',');
-            if (game.day % parseInt(interval) === 0) {
-                game.activeFestival = name;
-                return name;
-            }
-        }
-        game.activeFestival = null;
-        return null;
-    },
-    randomWeather() {
-        return ['晴', '阴', '小雨', '微风'][Math.floor(Math.random()*4)];
-    },
-    addPost(game, title, content, author = '玩家') {
-        game.forumPosts.unshift({ id: Date.now(), title, content, author, replies: [] });
-    },
-    addNotification(game, text, type='info') {
-        game.notifications.unshift({ id: Date.now(), text, type, read: false });
-        // 更新首页通知徽章
-        const badge = document.getElementById('badge-notification');
-        if (badge) {
-            const unread = game.notifications.filter(n=>!n.read).length;
-            badge.textContent = unread;
-            badge.classList.toggle('hidden', unread===0);
-        }
+// js/systems.js
+// 天气/节日
+function updateWeatherDisplay() { document.getElementById('topbar-weather')?.setAttribute('data-weather', DB.weather); }
+function advanceWorldTime(minutes=10) {
+    DB.worldTime.minute += minutes;
+    while(DB.worldTime.minute >= 60) { DB.worldTime.hour++; DB.worldTime.minute-=60; }
+    if(DB.worldTime.hour>=24) { DB.worldTime.day++; DB.worldTime.hour=0; }
+    // 简化季节...
+}
+// NPC自动活动（异步）
+async function aiMoveNpcs() { /* 调用ai决定移动 */ }
+// 世界书检索
+function getWorldBookContext(userInput) {
+    let matched = [];
+    for(let e of DB.worldBook.entries) {
+        if(e.constant || e.keys.some(k=>userInput.includes(k))) matched.push(e.content);
     }
-};
+    return matched.join("\n");
+}
+// 论坛增删查
+function addForumPost(author, content, type='player') {
+    DB.forumPosts.unshift({ id:Date.now(), author, content, time:Date.now(), likes:0, comments:[] });
+    saveData();
+}
+// NPC关系网初始化（占位）
+function ensureRelationshipNetwork() { if(!DB.relationshipNetwork.nodes.length) DB.relationshipNetwork.nodes = [{id:'player', name:'主角', type:'player'}]; }
+// 角色头像库智能分配
+function assignAvatarFromLibrary(character) {
+    if(!character.avatar) character.avatar = `https://i.pravatar.cc/150?img=${Math.floor(Math.random()*70)}`;
+}
+// 记忆自动摘要
+async function autoSummarizeMemory() { /* 调用LLM总结历史剧情 */ }
