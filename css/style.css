@@ -1,7 +1,7 @@
 :root {
     --primary: #6c5ce7;
     --primary-light: #a29bfe;
-    --bg: #faf8f5;           /* 温暖米白 */
+    --bg: #faf8f5;
     --card-bg: #ffffff;
     --text: #2c2c2c;
     --text-dim: #6b6b6b;
@@ -25,24 +25,11 @@ body {
     line-height: 1.6;
 }
 
-/* 加载 */
-#loading-overlay {
-    position: fixed; top:0; left:0; width:100%; height:100%;
-    background: var(--bg); display:flex; flex-direction:column;
-    align-items:center; justify-content:center; z-index:9999;
-    font-family: var(--font-serif); font-size:1.2rem; color: var(--text-dim);
-}
-.spinner-magazine {
-    width:40px; height:40px; border:3px solid var(--text-dim);
-    border-top-color: var(--primary); border-radius:50%;
-    animation: spin 1s linear infinite; margin-bottom:16px;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
+/* 移除了 #loading-overlay 和 .spinner-magazine 相关样式 */
 
 .page { display:none; flex-direction:column; min-height:100vh; }
 .page.active { display:flex; }
 
-/* 杂志首页头 */
 .magazine-header {
     background: var(--card-bg);
     padding: 24px 32px;
@@ -77,7 +64,6 @@ body {
     color:white; border-radius:10px; padding:2px 6px; font-size:0.7rem;
 }
 
-/* 首页内容 */
 .magazine-main { padding: 0 32px 40px; flex:1; overflow-y:auto; }
 .feature-hero {
     display: flex; justify-content: space-between; align-items: center;
@@ -93,7 +79,6 @@ body {
 }
 .decorative-circle.small { width:80px; height:80px; top:80px; left:100px; background:rgba(232,67,147,0.06); }
 
-/* 世界画廊 */
 .world-gallery { margin-bottom: 48px; }
 .section-header-magazine {
     display:flex; justify-content: space-between; align-items: baseline;
@@ -125,7 +110,6 @@ body {
 .tool-card i { font-size: 1.8rem; color: var(--primary); margin-bottom: 8px; }
 .tool-card span { font-size: 0.9rem; font-weight: 500; }
 
-/* 子页面通用 */
 .page-header {
     background: var(--card-bg); padding: 16px 32px; display: flex;
     align-items: center; justify-content: space-between;
@@ -161,7 +145,6 @@ body {
 .test-result.error { background:rgba(214,48,49,0.1); color:var(--danger); }
 .status-item { display:flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0ede8; }
 
-/* 游戏内部杂志风 */
 .game-magazine-top {
     background: var(--card-bg); padding: 12px 24px;
     display: flex; justify-content: space-between; align-items: center;
@@ -214,7 +197,6 @@ body {
 .nav-item.active { color: var(--primary); }
 .nav-item i { font-size: 1.2rem; margin-bottom: 2px; }
 
-/* 模态 */
 .modal-overlay {
     position: fixed; top:0; left:0; width:100%; height:100%;
     background: rgba(0,0,0,0.3); display: flex; align-items: center;
@@ -222,7 +204,6 @@ body {
 }
 .modal-card { background: white; border-radius: var(--radius); padding: 32px; max-width: 500px; width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
 
-/* 主题色点 */
 .theme-palette { display: flex; gap: 16px; }
 .theme-dot { width: 32px; height: 32px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
 .theme-dot.active { border-color: var(--text); }
