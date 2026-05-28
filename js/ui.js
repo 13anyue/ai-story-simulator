@@ -18,20 +18,13 @@ const UI = {
         if (this.pages[pageId]) {
             this.pages[pageId].classList.add('active');
             this.currentPage = pageId;
-            // 刷新对应页面内容
-            if (pageId === 'home') {
-                this.renderWorldCards();
-                this.updateWelcomeName();
-            } else if (pageId === 'profile') {
-                this.renderPersonas();
-                this.renderWorldSelect();
-            } else if (pageId === 'presets') {
-                this.renderPresets();
-            } else if (pageId === 'game') {
-                this.refreshGameUI();
-            } else if (pageId === 'apiConfig') {
-                this.loadApiFields();
-            }
+            // 根据页面刷新内容
+            if (pageId === 'home') this.refreshHome();
+            else if (pageId === 'profile') this.refreshProfile();
+            else if (pageId === 'presets') this.renderPresets();
+            else if (pageId === 'apiConfig') this.loadApiFields();
+            else if (pageId === 'game') this.refreshGameUI();
+            else if (pageId === 'theme') this.loadThemeFields();
         }
     },
     bindGlobalEvents() {
@@ -41,6 +34,14 @@ const UI = {
                 if (target) this.showPage(target);
             });
         });
+    },
+    refreshHome() {
+        this.renderWorldCards();
+        this.updateWelcomeName();
+    },
+    refreshProfile() {
+        this.renderPersonas();
+        this.renderWorldSelect();
     },
     updateWelcomeName() {
         const persona = AppState.personaList.find(p => p.id === AppState.activePersonaId);
@@ -92,13 +93,14 @@ const UI = {
         list.innerHTML = AppState.personaList.map(p => `
             <div class="persona-card">
                 <strong>${p.name}</strong>
-                <span class="text-dim">绑定世界：${p.worldBind || '无'}</span>
+                <span class="text-dim">绑定：${p.worldBind || '无'}</span>
                 <button class="btn-sm btn-outline select-persona" data-id="${p.id}">选择</button>
             </div>
         `).join('');
         list.querySelectorAll('.select-persona').forEach(btn => {
             btn.addEventListener('click', () => {
                 AppState.activePersonaId = btn.dataset.id;
+                localStorage.setItem('activePersonaId', AppState.activePersonaId);
                 this.updateWelcomeName();
                 UI.showToast('已切换面具角色');
             });
@@ -129,6 +131,23 @@ const UI = {
                 <button class="btn-sm btn-outline edit-preset" data-id="${p.id}">编辑</button>
             </div>
         `).join('');
+    },
+    loadApiFields() {
+        const config = APIManager.getConfig();
+        document.getElementById('api-endpoint').value = config.endpoint || '';
+        document.getElementById('api-key').value = config.key || '';
+        document.getElementById('api-model').value = config.model || '';
+        document.getElementById('api-temperature').value = config.temperature;
+        document.getElementById('temperature-value').textContent = config.temperature;
+        document.getElementById('api-max-tokens').value = config.maxTokens;
+    },
+    loadThemeFields() {
+        const theme = AppState.currentTheme || DEFAULT_DATA.theme;
+        document.getElementById('custom-primary-color').value = theme.primary;
+        document.getElementById('custom-bg-color').value = theme.bg;
+        document.getElementById('custom-card-color').value = theme.cardBg;
+        document.getElementById('custom-text-color').value = theme.text;
+        document.getElementById('custom-accent-color').value = theme.accent;
     },
     refreshGameUI() {
         if (!AppState.gameInstance) return;
@@ -162,13 +181,11 @@ const UI = {
         const g = AppState.gameInstance;
         const grid = document.getElementById('inventory-grid');
         grid.innerHTML = g.player.inventory.map(i => `
-            <div class="item-card tag" data-item-id="${i.id}" title="${i.desc || ''}">
-                <i class="fas ${i.icon || 'fa-box'}"></i> ${i.name}
-            </div>
+            <div class="item-card tag" title="${i.desc||''}"><i class="fas ${i.icon||'fa-box'}"></i> ${i.name}</div>
         `).join('');
         const privGrid = document.getElementById('private-items-grid');
         privGrid.innerHTML = g.player.privateItems.map(i => `
-            <div class="item-card tag" data-item-id="${i.id}"><i class="fas fa-lock"></i> ${i.name}</div>
+            <div class="item-card tag"><i class="fas fa-lock"></i> ${i.name}</div>
         `).join('');
         document.getElementById('item-count').textContent = g.player.inventory.length + '件';
     },
@@ -193,10 +210,7 @@ const UI = {
             });
         });
         container.querySelectorAll('.npc-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const npcId = card.dataset.npcId;
-                this.showNpcDetail(npcId);
-            });
+            card.addEventListener('click', () => this.showNpcDetail(card.dataset.npcId));
         });
     },
     showNpcDetail(npcId) {
@@ -233,19 +247,6 @@ const UI = {
             }
         };
     },
-    renderNpcInteractionTags(npc) {
-        const container = document.getElementById('npc-interaction-tags');
-        container.innerHTML = npc.interactions.map(act => `
-            <span class="tag">${act} <span class="remove-tag" data-action="${act}"><i class="fas fa-times"></i></span></span>
-        `).join('');
-        container.querySelectorAll('.remove-tag').forEach(el => {
-            el.addEventListener('click', () => {
-                const action = el.dataset.action;
-                npc.interactions = npc.interactions.filter(a => a !== action);
-                this.renderNpcInteractionTags(npc);
-            });
-        });
-    },
     openNpcPhone(npc) {
         GameSystems.generatePhoneContent(npc);
         const content = document.getElementById('modal-content');
@@ -268,87 +269,45 @@ const UI = {
     renderLocations() {
         const g = AppState.gameInstance;
         const list = document.getElementById('location-list');
-        list.innerHTML = g.locations.map(loc => `
-            <div class="location-item" data-loc-id="${loc.id}">
-                <strong>${loc.name}</strong> <span class="text-dim">${loc.npcIds?.length||0}人</span>
-            </div>
-        `).join('');
-        list.querySelectorAll('.location-item').forEach(el => {
-            el.addEventListener('click', () => {
-                const locId = el.dataset.locId;
-                const loc = g.locations.find(l => l.id == locId);
-                if (loc) {
-                    const npcsHere = g.npcs.filter(n => loc.npcIds?.includes(n.id));
-                    UI.showToast(`${loc.name}：${npcsHere.map(n=>n.name).join(',') || '空无一人'}`);
-                }
-            });
-        });
-        // 地图标记渲染
+        list.innerHTML = g.locations.map(loc => `<div class="location-item"><strong>${loc.name}</strong> <span class="text-dim">${loc.npcIds?.length||0}人</span></div>`).join('');
         this.renderMapMarkers();
     },
     renderMapMarkers() {
         const g = AppState.gameInstance;
         const container = document.getElementById('map-markers');
-        container.innerHTML = g.locations.map(loc => `
-            <div class="map-marker" style="left:${loc.x||50}%; top:${loc.y||50}%;" data-loc-id="${loc.id}" title="${loc.name}"></div>
-        `).join('');
-        container.querySelectorAll('.map-marker').forEach(marker => {
-            marker.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const locId = marker.dataset.locId;
-                UI.showToast(`地点：${g.locations.find(l=>l.id==locId)?.name}`);
-            });
-        });
+        container.innerHTML = g.locations.map(loc => `<div class="map-marker" style="left:${loc.x||50}%; top:${loc.y||50}%;" data-loc-id="${loc.id}" title="${loc.name}"></div>`).join('');
     },
     renderSaveSlots() {
         const saves = SaveManager.getAllSaves();
         const container = document.getElementById('save-slots');
         container.innerHTML = Object.keys(saves).map(key => `
             <div class="save-slot">
-                <span>${key} (${new Date(saves[key].timestamp).toLocaleString()})</span>
+                <span>${key}</span>
                 <button class="btn-sm btn-outline load-save" data-slot="${key}">读取</button>
                 <button class="btn-sm btn-outline delete-save" data-slot="${key}">删除</button>
             </div>
         `).join('');
-        container.querySelectorAll('.load-save').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const slot = btn.dataset.slot;
-                if (SaveManager.loadGame(slot)) {
-                    UI.showPage('game');
-                    UI.refreshGameUI();
-                }
-            });
-        });
-        container.querySelectorAll('.delete-save').forEach(btn => {
-            btn.addEventListener('click', () => {
-                SaveManager.deleteSave(btn.dataset.slot);
-                this.renderSaveSlots();
-            });
-        });
+        container.querySelectorAll('.load-save').forEach(btn => btn.addEventListener('click', () => {
+            if (SaveManager.loadGame(btn.dataset.slot)) { UI.showPage('game'); UI.refreshGameUI(); }
+        }));
+        container.querySelectorAll('.delete-save').forEach(btn => btn.addEventListener('click', () => {
+            SaveManager.deleteSave(btn.dataset.slot); UI.renderSaveSlots();
+        }));
     },
     renderFestivalTags() {
         const container = document.getElementById('festival-tags');
-        container.innerHTML = AppState.festivalList.map((f, idx) => {
+        container.innerHTML = AppState.festivalList.map((f,idx) => {
             const [name, interval] = f.split(',');
             return `<span class="tag">${name} (每${interval}天) <span class="remove-tag" data-index="${idx}"><i class="fas fa-times"></i></span></span>`;
         }).join('');
         container.querySelectorAll('.remove-tag').forEach(el => {
             el.addEventListener('click', () => {
                 const idx = parseInt(el.dataset.index);
-                AppState.festivalList.splice(idx, 1);
+                AppState.festivalList.splice(idx,1);
                 localStorage.setItem('festivalList', JSON.stringify(AppState.festivalList));
-                this.renderFestivalTags();
+                UI.renderFestivalTags();
             });
         });
-    },
-    loadApiFields() {
-        const config = APIManager.getConfig();
-        document.getElementById('api-endpoint').value = config.endpoint || '';
-        document.getElementById('api-key').value = config.key || '';
-        document.getElementById('api-model').value = config.model || '';
-        document.getElementById('api-temperature').value = config.temperature;
-        document.getElementById('temperature-value').textContent = config.temperature;
-        document.getElementById('api-max-tokens').value = config.maxTokens;
     },
     showToast(msg) {
         const container = document.getElementById('toast-container');
