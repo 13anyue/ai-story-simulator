@@ -1,54 +1,44 @@
-const APIManager = {
-    getConfig() {
-        const saved = localStorage.getItem('apiConfig');
-        return saved ? JSON.parse(saved) : { ...DEFAULT_DATA.api };
-    },
-    saveConfig(config) {
-        localStorage.setItem('apiConfig', JSON.stringify(config));
-    },
-    async testConnection(config) {
-        const { endpoint, key, model } = config;
-        if (!endpoint || !key) return { success: false, message: '请先填写端点和密钥' };
-        try {
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${key}`
-                },
-                body: JSON.stringify({
-                    model: model || 'gpt-3.5-turbo',
-                    messages: [{ role: 'user', content: 'ping' }],
-                    max_tokens: 5
-                })
-            });
-            if (response.ok) return { success: true, message: '连接成功！' };
-            const err = await response.text();
-            return { success: false, message: `错误 ${response.status}: ${err}` };
-        } catch (e) {
-            return { success: false, message: `网络错误: ${e.message}` };
+// js/api.js
+async function callLLM(userMsg, sysPrompt, streamCallback) {
+    const { endpoint, key, model } = DB.apiConfig;
+    if(!key) throw new Error("未配置API密钥");
+    const controller = new AbortController();
+    const timeout = setTimeout(()=>controller.abort(), 120000);
+    const res = await fetch(`${endpoint}/chat/completions`, {
+        method:'POST', headers: {'Content-Type':'application/json','Authorization':`Bearer ${key}`},
+        body: JSON.stringify({ model, messages: [{ role:'system', content:sysPrompt }, { role:'user', content:userMsg }], temperature:0.85, stream:!!streamCallback }),
+        signal: controller.signal
+    });
+    clearTimeout(timeout);
+    if(!res.ok) throw new Error(`API错误 ${res.status}`);
+    if(streamCallback && res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let full = "";
+        while(true) {
+            const { done, value } = await reader.read();
+            if(done) break;
+            let chunk = decoder.decode(value);
+            full += chunk;
+            streamCallback(chunk, full);
         }
-    },
-    async generateText(messages, config, systemPrompt = null) {
-        if (!config.endpoint || !config.key) throw new Error('API未配置');
-        const allMessages = [];
-        if (systemPrompt) allMessages.push({ role: 'system', content: systemPrompt });
-        allMessages.push(...messages);
-        const res = await fetch(config.endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${config.key}`
-            },
-            body: JSON.stringify({
-                model: config.model || 'gpt-3.5-turbo',
-                messages: allMessages,
-                temperature: config.temperature || 0.8,
-                max_tokens: config.maxTokens || 2048
-            })
-        });
-        if (!res.ok) throw new Error(`请求失败: ${res.status}`);
-        const data = await res.json();
-        return data.choices[0].message.content;
+        return full;
+    } else {
+        let json = await res.json();
+        return json.choices[0].message.content;
     }
-};
+}
+async function testAPIConnection() {
+    try {
+        let result = await callLLM("测试连通", "请回复'连通成功'", false);
+        alert("API连接成功：" + result.slice(0,50));
+        return true;
+    } catch(e) { alert("连接失败："+e.message); return false; }
+}
+async function fetchModels() {
+    const { endpoint, key } = DB.apiConfig;
+    const res = await fetch(`${endpoint}/models`, { headers:{'Authorization':`Bearer ${key}`} });
+    let data = await res.json();
+    let models = data.data?.map(m=>m.id) || [];
+    return models;
+}
