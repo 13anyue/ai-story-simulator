@@ -1,65 +1,36 @@
-const GameCore = {
-    async generateStory(prompt, extraContext = '') {
-        const config = APIManager.getConfig();
-        const game = AppState.gameInstance;
-        const systemPrompt = AppState.getActivePreset()?.content || DEFAULT_DATA.presets[0].content;
-        const worldBook = game.worldBook || '';
-        let fullPrompt = `当前状态：第${game.day}天，${game.time}，${game.weather}。玩家：${game.player.name}。\n`;
-        if (worldBook) fullPrompt += `世界设定：${worldBook}\n`;
-        if (extraContext) fullPrompt += `额外背景：${extraContext}\n`;
-        fullPrompt += prompt;
-        try {
-            const text = await APIManager.generateText([{ role: 'user', content: fullPrompt }], config, systemPrompt);
-            return text;
-        } catch (e) {
-            return `<em>【离线模式】</em>你继续在${game.worldName}中探索。\n<b>系统提示：</b>${e.message}`;
-        }
-    },
-    async handlePlayerChoice(choiceText) {
-        const game = AppState.gameInstance;
-        game.storyHistory.push({ role:'user', content:choiceText });
-        const response = await this.generateStory(choiceText);
-        game.storyHistory.push({ role:'assistant', content:response });
-        game.day++;
-        game.weather = GameSystems.randomWeather();
-        GameSystems.checkFestival(game);
-        this.displayStory(response);
-        this.generateOptions(response);
-        UI.refreshGameUI();
-    },
-    displayStory(text) {
-        const contentEl = document.getElementById('story-content');
-        contentEl.innerHTML = this.formatStory(text);
-    },
-    formatStory(text) {
-        return text
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.*?)\*/g, '<em>$1</em>')
-            .replace(/【(.*?)】/g, '<span class="highlight">【$1】</span>');
-    },
-    generateOptions(text) {
-        const container = document.getElementById('story-options');
-        const defaults = ['继续探索', '与周围人交谈', '休息片刻'];
-        const options = new Set();
-        if (text.includes('对话')) options.add('回应对话');
-        if (text.includes('物品')) options.add('查看物品');
-        defaults.forEach(o => options.add(o));
-        const opts = [...options].slice(0,3);
-        container.innerHTML = opts.map(opt => `<button class="story-option-btn">${opt}</button>`).join('');
-        container.querySelectorAll('.story-option-btn').forEach(btn => {
-            btn.addEventListener('click', () => this.handlePlayerChoice(btn.textContent));
-        });
-    },
-    async interactWithNpc(npcId, action) {
-        const game = AppState.gameInstance;
-        const npc = game.npcs.find(n => n.id === npcId);
-        if (!npc) return;
-        GameSystems.recordNpcAppearance(game, npcId);
-        const prompt = `你对${npc.name}执行了“${action}”。请以${npc.name}的身份回应。`;
-        const response = await this.generateStory(prompt);
-        GameSystems.addLifeLog(game, `与${npc.name}交互：${action}`);
-        this.displayStory(`<strong>${npc.name}：</strong>${response}`);
-        this.generateOptions(response);
-        UI.refreshGameUI();
-    }
-};
+// js/game-core.js
+let isGenerating = false;
+async function generateStory(userInstruction) {
+    if(isGenerating) return;
+    isGenerating = true;
+    document.getElementById('global-loader')?.classList.remove('hidden');
+    let sys = buildSystemPrompt();
+    let wbCtx = getWorldBookContext(userInstruction);
+    let finalPrompt = `${wbCtx}\n【玩家行动】${userInstruction}\n请返回JSON格式: {"narrative":"HTML卡片","choices":["选项"],"player_update":{},"npc_update":[]}`;
+    try {
+        let raw = await callLLM(finalPrompt, sys, false);
+        let json = JSON.parse(raw);
+        appendStoryHTML(json.narrative, json.choices);
+        // 更新主角/NPC数据
+        if(json.player_update) Object.assign(DB.gameState.player, json.player_update);
+        if(json.npc_update) json.npc_update.forEach(n=>{ let idx=DB.gameState.npcs.findIndex(x=>x.id===n.id); if(idx>=0) Object.assign(DB.gameState.npcs[idx], n); else DB.gameState.npcs.push(n); });
+        advanceWorldTime(12);
+        saveData();
+    } catch(e) { appendStoryHTML(`<div class="text-red-500">剧情生成出错: ${e.message}</div>`, []); }
+    finally { isGenerating=false; document.getElementById('global-loader')?.classList.add('hidden'); }
+}
+function buildSystemPrompt() {
+    return `你是高自由度文字游戏AI。世界观:${DB.gameState?.globalLore||''}\n输出严格按照精美HTML卡片+选项。属性变化用🎲标记。对话采用【名字:内容】。分支选项用||分割。`;
+}
+function selectChoice(choice) { generateStory(choice); }
+function submitCustomAction() { let inp=document.getElementById('free-input'); if(inp.value) generateStory(inp.value); inp.value=''; }
+// 开局初始化世界
+async function initGameWithWorld(worldId) {
+    let world = DB.worlds.find(w=>w.id===worldId);
+    DB.gameState = { worldId, worldName:world.name, globalLore:world.globalLore, systemPrompt:world.systemPrompt, player:{ name:"主角", stats:{"气血":100,"灵力":50}, inventory:[] }, npcs:world.npcs || [], locations:world.locations || [], currentLocationId:world.locations?.[0]?.id || "", worldBookEntries:[] };
+    DB.maps = [{ id:"main", name:world.name, bgUrl:"", locations:DB.gameState.locations }];
+    DB.currentMapId = "main";
+    switchScreen('screen-gameplay');
+    renderGameUI();
+    generateStory("开局描述，展现世界风貌");
+}
